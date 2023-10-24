@@ -4,8 +4,10 @@ pragma solidity 0.8.18;
 import "forge-std/console.sol";
 import {ExtendedTest} from "./ExtendedTest.sol";
 
-import {Strategy, ERC20} from "../../Strategy.sol";
+import {StargateStaker, ERC20} from "../../StargateStaker.sol";
 import {IStrategyInterface} from "../../interfaces/IStrategyInterface.sol";
+
+import {ILPStaking} from "src/interfaces/Stargate/ILPStaking.sol";
 
 // Inherit the events so they can be checked if desired.
 import {IEvents} from "@tokenized-strategy/interfaces/IEvents.sol";
@@ -45,6 +47,12 @@ contract Setup is ExtendedTest, IEvents {
     // Default profit max unlock time is set for 10 days
     uint256 public profitMaxUnlockTime = 10 days;
 
+    // Constructor specific params
+    address _lpStaker = 0x8731d54E9D02c286767d56ac03e8037C07e01e98;
+    address _stargateRouter = 0x45A01E4e04F14f7A4a6702c74187c5F6222033cd;
+    uint16 public _stakingID = 2; // (S*USDC: 0, S*USDT: 1, S*DAI: 2)
+    address _base = 0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619;
+
     function setUp() public virtual {
         _setTokenAddrs();
 
@@ -71,7 +79,7 @@ contract Setup is ExtendedTest, IEvents {
     function setUpStrategy() public returns (address) {
         // we save the strategy as a IStrategyInterface to give it the needed interface
         IStrategyInterface _strategy = IStrategyInterface(
-            address(new Strategy(address(asset), "Tokenized Strategy"))
+            address(new StargateStaker(address(asset), "Tokenized Strategy", _lpStaker, _stargateRouter, _stakingID, _base))
         );
 
         // set keeper
@@ -141,12 +149,12 @@ contract Setup is ExtendedTest, IEvents {
     }
 
     function _setTokenAddrs() internal {
-        tokenAddrs["WBTC"] = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
-        tokenAddrs["YFI"] = 0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e;
-        tokenAddrs["WETH"] = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-        tokenAddrs["LINK"] = 0x514910771AF9Ca656af840dff83E8264EcF986CA;
-        tokenAddrs["USDT"] = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
-        tokenAddrs["DAI"] = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-        tokenAddrs["USDC"] = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+        tokenAddrs["DAI"] = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063;
+        tokenAddrs["USDT"] = 0xc2132D05D31c914a87C6611C10748AEb04B58e8F;
+        tokenAddrs["USDC"] = 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174;
+    }
+
+    function _updateRewards() internal {
+        ILPStaking(strategy.lpStaker()).massUpdatePools();
     }
 }

@@ -19,6 +19,7 @@ contract ShutdownTest is Setup {
 
         // Earn Interest
         skip(1 days);
+        _updateRewards();
 
         // Shutdown the strategy
         vm.prank(management);
