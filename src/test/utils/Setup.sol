@@ -53,8 +53,8 @@ contract Setup is ExtendedTest, IEvents {
     uint16 public _stakingID = 1; // (S*USDC: 0, S*USDT: 1, S*DAI: 2)
 
     address _base = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270; // WMATIC
-    uint24 _rewardToBaseFee = 30; // for STG/WMATIC
-    uint24 _baseToAssetFee = 5; // for WMATIC/USDT
+    uint24 _rewardToBaseFee = 3000; // for STG/WMATIC
+    uint24 _baseToAssetFee = 500; // for WMATIC/USDT
 
     address stg = 0x2F6F07CDcf3588944Bf4C42aC74ff24bF56e7590;
 
