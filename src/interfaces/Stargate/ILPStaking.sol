@@ -22,4 +22,7 @@ interface ILPStaking {
     function deposit(uint256 _pid, uint256 _amount) external;
     function withdraw(uint256 _pid, uint256 _amount) external;
     function massUpdatePools() external;
+    function updatePool(uint256 _pid) external;
+    function pendingStargate(uint256 _pid, address _user) external view returns (uint256);
+
 }

@@ -11,7 +11,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ILPStaking} from "./interfaces/Stargate/ILPStaking.sol";
 import {IPool} from "./interfaces/Stargate/IPool.sol";
 import {IStargateRouter} from "./interfaces/Stargate/IStargateRouter.sol";
-
+import {Test, console2} from "forge-std/Test.sol"; //@todo: remove
 /**
  * @title StargateStaker
  * @author 0xValJohn
@@ -27,7 +27,7 @@ contract StargateStaker is BaseStrategy, UniswapV3Swapper {
     uint256 public immutable stakingID; // @dev Pool ID for LPStaking
     ERC20 public immutable reward;
     ERC20 public immutable lpToken;
-    uint256 public immutable convertRate;
+    uint256 internal immutable convertRate;
     address internal constant _router = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
 
     event MinToSellUpdated(uint256 newMinAmountToSell);
@@ -47,11 +47,13 @@ contract StargateStaker is BaseStrategy, UniswapV3Swapper {
         require(address(lpToken) != address(0), "Invalid lpToken");
         pool = IPool(address(lpToken));
         require(pool.token() == _asset, "Invalid asset");
-        lpToken.safeApprove(address(lpStaker), type(uint256).max);
-        ERC20(_asset).safeApprove(address(stargateRouter), type(uint256).max);
         reward = ERC20(lpStaker.stargate());
         base = _base;
+
         convertRate = pool.convertRate();
+
+        lpToken.safeApprove(address(lpStaker), type(uint256).max);
+        ERC20(_asset).safeApprove(address(stargateRouter), type(uint256).max);
     }
 
     function _deployFunds(uint256 _amount) internal override {
@@ -73,8 +75,9 @@ contract StargateStaker is BaseStrategy, UniswapV3Swapper {
                 _deployFunds(looseAsset);
             }
         }
-
-        _totalAssets = valueOfLPTokens() + ERC20(asset).balanceOf(address(this));
+        uint256 _totalLPTokenBalance =
+            lpToken.balanceOf(address(this)) + lpStaker.userInfo(stakingID, address(this)).amount;
+        _totalAssets = _lpToLd(_totalLPTokenBalance) + ERC20(asset).balanceOf(address(this));
     }
 
     function _claimAndSellRewards() internal {
@@ -87,8 +90,12 @@ contract StargateStaker is BaseStrategy, UniswapV3Swapper {
         _freeFunds(Math.min(_ldToLp(_amount), pool.deltaCredit()));
     }
 
-    function _ldToLp(uint256 _amountLD) internal view returns (uint256) {
-        return _amountLD * pool.totalSupply() / pool.totalLiquidity() / convertRate;
+    function _ldToLp(uint256 _amountLd) internal view returns (uint256) {
+        return _amountLd * pool.totalSupply() / pool.totalLiquidity() / convertRate;
+    }
+
+    function _lpToLd(uint256 _amountLp) internal view returns (uint256) {
+        return _amountLp * pool.totalLiquidity() * convertRate / pool.totalSupply();
     }
 
     function _stakeLP(uint256 _amountToStake) internal {
@@ -99,12 +106,6 @@ contract StargateStaker is BaseStrategy, UniswapV3Swapper {
         return pool.deltaCredit() + TokenizedStrategy.totalIdle();
     }
 
-    function valueOfLPTokens() public view returns (uint256) {
-        uint256 _totalLPTokenBalance =
-            lpToken.balanceOf(address(this)) + lpStaker.userInfo(stakingID, address(this)).amount;
-        return _totalLPTokenBalance * pool.totalLiquidity() * convertRate / pool.totalSupply();
-    }
-
     function setUniFees(address _token0, address _token1, uint24 _fee) external onlyManagement {
         _setUniFees(_token0, _token1, _fee);
     }
@@ -113,4 +114,20 @@ contract StargateStaker is BaseStrategy, UniswapV3Swapper {
         minAmountToSell = _minAmountToSell;
         emit MinToSellUpdated(_minAmountToSell);
     }
+
+    function setFees(
+        uint24 _rewardToBaseFee,
+        uint24 _baseToAssetFee
+    ) external onlyManagement {
+        _setFees(_rewardToBaseFee, _baseToAssetFee);
+    }
+
+    function _setFees(
+        uint24 _rewardToBaseFee,
+        uint24 _baseToAssetFee
+    ) internal {
+        _setUniFees(address(reward), base, _rewardToBaseFee);
+        _setUniFees(base, address(asset), _baseToAssetFee);
+    }
+
 }

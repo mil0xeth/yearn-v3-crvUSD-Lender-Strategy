@@ -3,6 +3,7 @@ pragma solidity ^0.8.18;
 
 import "forge-std/console.sol";
 import {Setup} from "./utils/Setup.sol";
+import {Test, console2} from "forge-std/Test.sol"; //@todo: remove
 
 contract OperationTest is Setup {
     function setUp() public override {
@@ -30,7 +31,7 @@ contract OperationTest is Setup {
 
         // Earn Interest
         skip(1 days);
-        _updateRewards();
+        _mockRewards(_amount);
 
         // Report profit
         vm.prank(keeper);
@@ -70,7 +71,7 @@ contract OperationTest is Setup {
 
         // Earn Interest
         skip(1 days);
-        _updateRewards();
+        _mockRewards(_amount);
 
         // TODO: implement logic to simulate earning interest.
         uint256 toAirdrop = (_amount * _profitFactor) / MAX_BPS;
@@ -117,7 +118,7 @@ contract OperationTest is Setup {
 
         // Earn Interest
         skip(1 days);
-        _updateRewards();
+        _mockRewards(_amount);
 
         // TODO: implement logic to simulate earning interest.
         uint256 toAirdrop = (_amount * _profitFactor) / MAX_BPS;
@@ -180,7 +181,7 @@ contract OperationTest is Setup {
 
         // Skip some time
         skip(1 days);
-        _updateRewards();
+        _mockRewards(_amount);
 
         (trigger, ) = strategy.tendTrigger();
         assertTrue(!trigger);

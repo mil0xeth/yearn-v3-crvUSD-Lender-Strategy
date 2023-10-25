@@ -42,7 +42,7 @@ contract Setup is ExtendedTest, IEvents {
 
     // Fuzz from $0.01 of 1e6 stable coins up to 1 trillion of a 1e18 coin
     uint256 public maxFuzzAmount = 1e30;
-    uint256 public minFuzzAmount = 10_000;
+    uint256 public minFuzzAmount = 1e8;
 
     // Default profit max unlock time is set for 10 days
     uint256 public profitMaxUnlockTime = 10 days;
@@ -50,14 +50,19 @@ contract Setup is ExtendedTest, IEvents {
     // Constructor specific params
     address _lpStaker = 0x8731d54E9D02c286767d56ac03e8037C07e01e98;
     address _stargateRouter = 0x45A01E4e04F14f7A4a6702c74187c5F6222033cd;
-    uint16 public _stakingID = 2; // (S*USDC: 0, S*USDT: 1, S*DAI: 2)
-    address _base = 0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619;
+    uint16 public _stakingID = 1; // (S*USDC: 0, S*USDT: 1, S*DAI: 2)
+
+    address _base = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270; // WMATIC
+    uint24 _rewardToBaseFee = 30; // for STG/WMATIC
+    uint24 _baseToAssetFee = 5; // for WMATIC/USDT
+
+    address stg = 0x2F6F07CDcf3588944Bf4C42aC74ff24bF56e7590;
 
     function setUp() public virtual {
         _setTokenAddrs();
 
         // Set asset
-        asset = ERC20(tokenAddrs["DAI"]);
+        asset = ERC20(tokenAddrs["USDT"]);
 
         // Set decimals
         decimals = asset.decimals();
@@ -91,7 +96,8 @@ contract Setup is ExtendedTest, IEvents {
 
         vm.prank(management);
         _strategy.acceptManagement();
-
+        vm.prank(management);
+        _strategy.setFees(_rewardToBaseFee, _baseToAssetFee);
         return address(_strategy);
     }
 
@@ -154,7 +160,7 @@ contract Setup is ExtendedTest, IEvents {
         tokenAddrs["USDC"] = 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174;
     }
 
-    function _updateRewards() internal {
-        ILPStaking(strategy.lpStaker()).massUpdatePools();
+    function _mockRewards(uint256 _amount) internal {
+        deal(address(stg), address(strategy), _amount * 1e18 / 200);
     }
 }
