@@ -21,17 +21,6 @@ contract StargateStakerFactory {
         keeper = _keeper;
     }
 
-    /**
-     * @notice Deploy a new Stargate Staker.
-     * @dev This will set the msg.sender to all of the permisioned roles.
-     * @param _asset The underlying asset for the lender to use.
-     * @param _name The name for the lender to use.
-     * @param _lpStaker The address of the LPStaker contract.
-     * @param _stargateRouter The address of the StargateRouter contract.
-     * @param _stakingID The ID of the pool to stake in.
-     * @param _base The address of the base token.
-     * @return . The address of the new lender.
-     */
     function newStargateStaker(
         address _asset,
         string memory _name,
@@ -40,16 +29,12 @@ contract StargateStakerFactory {
         uint16 _stakingID,
         address _base
     ) external returns (address) {
-        // We need to use the custom interface with the
-        // tokenized strategies available setters.
         IStrategy newStrategy = IStrategy(
             address(new StargateStaker(_asset, _name, _lpStaker, _stargateRouter, _stakingID, _base))
         );
 
         newStrategy.setPerformanceFeeRecipient(perfomanceFeeRecipient);
-
         newStrategy.setKeeper(keeper);
-
         newStrategy.setPendingManagement(management);
 
         emit NewStargateStaker(address(newStrategy), _asset);

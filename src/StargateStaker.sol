@@ -11,11 +11,11 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ILPStaking} from "./interfaces/Stargate/ILPStaking.sol";
 import {IPool} from "./interfaces/Stargate/IPool.sol";
 import {IStargateRouter} from "./interfaces/Stargate/IStargateRouter.sol";
-import {Test, console2} from "forge-std/Test.sol"; //@todo: remove
+
 /**
  * @title StargateStaker
  * @author 0xValJohn
- * @notice A Yearn V3 strategy that stakes LP tokens in the Stargate protocol.
+ * @notice A Yearn V3 strategy that deposits native asset and stakes LP tokens in the Stargate protocol.
  */
 
 contract StargateStaker is BaseStrategy, UniswapV3Swapper {
@@ -24,11 +24,15 @@ contract StargateStaker is BaseStrategy, UniswapV3Swapper {
     ILPStaking public immutable lpStaker;
     IStargateRouter public immutable stargateRouter;
     IPool public immutable pool;
-    uint256 public immutable stakingID; // @dev Pool ID for LPStaking
+
+    uint256 public immutable stakingID; // @dev pool id for staking
+    uint256 internal immutable convertRate;
+    uint16 public immutable poolId;
+
+    address internal constant _router = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
+
     ERC20 public immutable reward;
     ERC20 public immutable lpToken;
-    uint256 internal immutable convertRate;
-    address internal constant _router = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
 
     event MinToSellUpdated(uint256 newMinAmountToSell);
 
@@ -43,28 +47,31 @@ contract StargateStaker is BaseStrategy, UniswapV3Swapper {
         lpStaker = ILPStaking(_lpStaker);
         stargateRouter = IStargateRouter(_stargateRouter);
         stakingID = _stakingID;
+
         lpToken = lpStaker.poolInfo(_stakingID).lpToken;
         require(address(lpToken) != address(0), "Invalid lpToken");
+
         pool = IPool(address(lpToken));
         require(pool.token() == _asset, "Invalid asset");
-        reward = ERC20(lpStaker.stargate());
-        base = _base;
 
+        poolId = uint16(pool.poolId());
+        reward = ERC20(lpStaker.stargate());
         convertRate = pool.convertRate();
+        base = _base;
 
         lpToken.safeApprove(address(lpStaker), type(uint256).max);
         ERC20(_asset).safeApprove(address(stargateRouter), type(uint256).max);
     }
 
     function _deployFunds(uint256 _amount) internal override {
-        stargateRouter.addLiquidity(pool.poolId(), _amount, address(this));
+        stargateRouter.addLiquidity(poolId, _amount, address(this));
         _stakeLP(lpToken.balanceOf(address(this)));
     }
 
     function _freeFunds(uint256 _amount) internal override {
         uint256 _lpAmount = _ldToLp(_amount);
-        lpStaker.withdraw(stakingID, _lpAmount); // @dev Unstake
-        stargateRouter.instantRedeemLocal(uint16(pool.poolId()), _lpAmount, address(this)); // @dev Withdraw
+        lpStaker.withdraw(stakingID, _lpAmount); // @dev unstake
+        stargateRouter.instantRedeemLocal(poolId, _lpAmount, address(this)); // @dev withdraw
     }
 
     function _harvestAndReport() internal override returns (uint256 _totalAssets) {
@@ -81,7 +88,7 @@ contract StargateStaker is BaseStrategy, UniswapV3Swapper {
     }
 
     function _claimAndSellRewards() internal {
-        _stakeLP(0); // @dev Claim rewards
+        _stakeLP(0); // @dev claim rewards
         uint256 _rewardBalance = reward.balanceOf(address(this));
         _swapFrom(address(reward), address(asset), _rewardBalance, 0);
     }
@@ -113,21 +120,6 @@ contract StargateStaker is BaseStrategy, UniswapV3Swapper {
     function setMinAmountToSell(uint256 _minAmountToSell) external onlyManagement {
         minAmountToSell = _minAmountToSell;
         emit MinToSellUpdated(_minAmountToSell);
-    }
-
-    function setFees(
-        uint24 _rewardToBaseFee,
-        uint24 _baseToAssetFee
-    ) external onlyManagement {
-        _setFees(_rewardToBaseFee, _baseToAssetFee);
-    }
-
-    function _setFees(
-        uint24 _rewardToBaseFee,
-        uint24 _baseToAssetFee
-    ) internal {
-        _setUniFees(address(reward), base, _rewardToBaseFee);
-        _setUniFees(base, address(asset), _baseToAssetFee);
     }
 
 }
