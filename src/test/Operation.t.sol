@@ -17,7 +17,6 @@ contract OperationTest is Setup {
         assertEq(strategy.management(), management);
         assertEq(strategy.performanceFeeRecipient(), performanceFeeRecipient);
         assertEq(strategy.keeper(), keeper);
-        // TODO: add additional check on strat params
     }
 
     function test_operation(uint256 _amount) public {
@@ -26,12 +25,11 @@ contract OperationTest is Setup {
         // Deposit into strategy
         mintAndDepositIntoStrategy(strategy, user, _amount);
 
-        // TODO: Implement logic so totalDebt is _amount and totalIdle = 0.
+        // Implement logic so totalDebt is _amount and totalIdle = 0.
         checkStrategyTotals(strategy, _amount, _amount, 0);
 
-        // Earn Interest
-        skip(1 days);
-        _mockRewards(_amount);
+        // Earn rewards
+        vm.roll(block.number + 100);
 
         // Report profit
         vm.prank(keeper);
@@ -45,6 +43,7 @@ contract OperationTest is Setup {
 
         uint256 balanceBefore = asset.balanceOf(user);
 
+        _mockDeltaCredits();
         // Withdraw all funds
         vm.prank(user);
         strategy.redeem(_amount, user, user);

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.18;
 
-import {BaseStrategy, ERC20} from "@tokenized-strategy/BaseStrategy.sol";
+import {BaseHealthCheck, ERC20} from "@periphery/HealthCheck/BaseHealthCheck.sol";
 import {UniswapV3Swapper} from "@periphery/swappers/UniswapV3Swapper.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -18,7 +18,7 @@ import {IStargateRouter} from "./interfaces/Stargate/IStargateRouter.sol";
  * @notice A Yearn V3 strategy that deposits native asset and stakes LP tokens in the Stargate protocol.
  */
 
-contract StargateStaker is BaseStrategy, UniswapV3Swapper {
+contract StargateStaker is BaseHealthCheck, UniswapV3Swapper {
     using SafeERC20 for ERC20;
 
     ILPStaking public immutable lpStaker;
@@ -28,8 +28,6 @@ contract StargateStaker is BaseStrategy, UniswapV3Swapper {
     uint256 public immutable stakingID; // @dev pool id for staking
     uint256 internal immutable convertRate;
     uint16 public immutable poolId;
-
-    address internal constant _router = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
 
     ERC20 public immutable reward;
     ERC20 public immutable lpToken;

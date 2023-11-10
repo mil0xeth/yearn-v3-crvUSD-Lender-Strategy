@@ -9,7 +9,7 @@ size  :; forge build --sizes
 inspect :; forge inspect ${contract} storage-layout --pretty
 
 FORK_URL := ${MATIC_RPC_URL} 
-TEST_SINGLE := test_shutdownCanWithdraw
+TEST_SINGLE := test_increase_delta_credit
 
 # local tests without fork
 test  :; forge test -vv --fork-url ${FORK_URL} --etherscan-api-key ${ETHERSCAN_API_KEY}
@@ -23,6 +23,6 @@ trace-test  :; forge test -vvv --match-test $(test) --fork-url ${FORK_URL} --eth
 snapshot :; forge snapshot -vv --fork-url ${FORK_URL} --etherscan-api-key ${ETHERSCAN_API_KEY}
 snapshot-diff :; forge snapshot --diff -vv --fork-url ${FORK_URL} --etherscan-api-key ${ETHERSCAN_API_KEY}
 test-single :; forge test -vv --fork-url ${FORK_URL} --etherscan-api-key ${ETHERSCAN_API_KEY} --match-test ${TEST_SINGLE}
-trace-single :; forge test -vvv --fork-url ${FORK_URL} --etherscan-api-key ${ETHERSCAN_API_KEY} --match-test ${TEST_SINGLE}
+trace-single :; forge test -vvvv --fork-url ${FORK_URL} --etherscan-api-key ${ETHERSCAN_API_KEY} --match-test ${TEST_SINGLE}
 
 clean  :; forge clean

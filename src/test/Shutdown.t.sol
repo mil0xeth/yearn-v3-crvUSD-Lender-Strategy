@@ -19,6 +19,9 @@ contract ShutdownTest is Setup {
 
         // Earn Interest
         skip(1 days);
+        emit log_uint(block.number); // 100
+        vm.roll(block.number+100);
+        emit log_uint(block.number); // 100
         _mockRewards(_amount);
 
         // Shutdown the strategy

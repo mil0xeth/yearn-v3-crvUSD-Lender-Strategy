@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.18;
 
-import "forge-std/console.sol";
+import "forge-std/console2.sol";
 import {ExtendedTest} from "./ExtendedTest.sol";
+import {IStrategyInterface} from "../../interfaces/IStrategyInterface.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {StargateStaker, ERC20} from "../../StargateStaker.sol";
-import {IStrategyInterface} from "../../interfaces/IStrategyInterface.sol";
 import {IStargateRouter} from "../../interfaces/Stargate/IStargateRouter.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ILPStaking} from "src/interfaces/Stargate/ILPStaking.sol";
+import {IPool} from "src/interfaces/Stargate/IPool.sol";
 
 // Inherit the events so they can be checked if desired.
 import {IEvents} from "@tokenized-strategy/interfaces/IEvents.sol";
@@ -35,9 +36,11 @@ contract Setup is ExtendedTest, IEvents {
 
     // Addresses for different roles we will use repeatedly.
     address public user = address(10);
+    address public whale = address(0x65bb797c2B9830d891D87288F029ed8dACc19705);
     address public keeper = address(4);
     address public management = address(1);
     address public performanceFeeRecipient = address(3);
+    address public router_owner = address(0x47290DE56E71DC6f46C26e50776fe86cc8b21656);
 
     // Address of the real deployed Factory
     address public factory;
@@ -48,7 +51,7 @@ contract Setup is ExtendedTest, IEvents {
 
     // Fuzz from $100 of 1e6 stable coins up to 1 trillion of a 1e18 coin
     uint256 public maxFuzzAmount = 1e30;
-    uint256 public minFuzzAmount = 1e9;
+    uint256 public minFuzzAmount;
 
     // Default profit max unlock time is set for 10 days
     uint256 public profitMaxUnlockTime = 10 days;
@@ -73,6 +76,7 @@ contract Setup is ExtendedTest, IEvents {
 
         // Set decimals
         decimals = asset.decimals();
+        minFuzzAmount = 1e2 * 10 ** decimals;
 
         // Deploy strategy and set variables
         strategy = IStrategyInterface(setUpStrategy());
@@ -190,6 +194,30 @@ contract Setup is ExtendedTest, IEvents {
 
     function _mockRewards(uint256 _amount) internal {
         deal(address(_stg), address(strategy), _amount * 1e18 / 200);
+    }
+
+    function _mockDeltaCredits() internal {
+        console2.log("credit before", IPool(address((strategy.pool()))).deltaCredit());
+        deal(address(asset), address(whale), type(uint256).max);
+
+        deal(address(strategy.lpToken()), address(_stargateRouter), type(uint256).max);
+        deal(address(strategy.lpToken()), address(strategy.pool()), type(uint256).max);
+
+        vm.startPrank(whale);
+        ERC20(asset).safeApprove(address(_stargateRouter), type(uint256).max);
+        IStargateRouter(address(_stargateRouter)).addLiquidity(strategy.poolId(), 1e24, address(whale));
+        vm.stopPrank();
+
+        skip(5 days);
+        // vm.roll(block.number + 5);
+
+        IStargateRouter(address(_stargateRouter)).callDelta(strategy.poolId(), true);
+
+
+        console2.log("credit after", IPool(address((strategy.pool()))).deltaCredit());
+        vm.roll(block.number + 5);
+        console2.log("credit after roll", IPool(address((strategy.pool()))).deltaCredit());
+        
     }
 
 }
