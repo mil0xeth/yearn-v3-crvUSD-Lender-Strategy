@@ -41,7 +41,7 @@ contract StargateStaker is BaseHealthCheck, UniswapV3Swapper {
         address _stargateRouter,
         uint16 _stakingID,
         address _base
-    ) BaseStrategy(_asset, _name) {
+    ) BaseHealthCheck(_asset, _name) {
         lpStaker = ILPStaking(_lpStaker);
         stargateRouter = IStargateRouter(_stargateRouter);
         stakingID = _stakingID;
