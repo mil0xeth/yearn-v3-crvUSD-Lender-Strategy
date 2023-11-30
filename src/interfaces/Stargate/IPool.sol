@@ -9,4 +9,5 @@ interface IPool {
     function deltaCredit() external view returns (uint256);
     function convertRate() external view returns (uint256);
     function amountLPtoLD(uint256 _amountLP) external view returns (uint256);
+    function balanceOf(address user) external view returns (uint256);
 }

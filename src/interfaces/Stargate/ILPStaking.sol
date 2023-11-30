@@ -17,12 +17,17 @@ interface ILPStaking {
     }
 
     function poolInfo(uint256 _index) external view returns (PoolInfo memory);
-    function userInfo(uint256 _pid, address _user) external view returns (UserInfo memory);
+    function userInfo(
+        uint256 _pid,
+        address _user
+    ) external view returns (UserInfo memory);
     function stargate() external view returns (address);
     function deposit(uint256 _pid, uint256 _amount) external;
     function withdraw(uint256 _pid, uint256 _amount) external;
     function massUpdatePools() external;
     function updatePool(uint256 _pid) external;
-    function pendingStargate(uint256 _pid, address _user) external view returns (uint256);
-
+    function pendingStargate(
+        uint256 _pid,
+        address _user
+    ) external view returns (uint256);
 }

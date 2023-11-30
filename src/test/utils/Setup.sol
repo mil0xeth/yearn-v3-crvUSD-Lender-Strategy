@@ -40,7 +40,8 @@ contract Setup is ExtendedTest, IEvents {
     address public keeper = address(4);
     address public management = address(1);
     address public performanceFeeRecipient = address(3);
-    address public router_owner = address(0x47290DE56E71DC6f46C26e50776fe86cc8b21656);
+    address public router_owner =
+        address(0x47290DE56E71DC6f46C26e50776fe86cc8b21656);
 
     // Address of the real deployed Factory
     address public factory;
@@ -95,7 +96,16 @@ contract Setup is ExtendedTest, IEvents {
     function setUpStrategy() public returns (address) {
         // we save the strategy as a IStrategyInterface to give it the needed interface
         IStrategyInterface _strategy = IStrategyInterface(
-            address(new StargateStaker(address(asset), "Tokenized Strategy", _lpStaker, _stargateRouter, stakingId[token], _base))
+            address(
+                new StargateStaker(
+                    address(asset),
+                    "Tokenized Strategy",
+                    _lpStaker,
+                    _stargateRouter,
+                    stakingId[token],
+                    _base
+                )
+            )
         );
 
         // set keeper
@@ -110,8 +120,8 @@ contract Setup is ExtendedTest, IEvents {
 
         // set swapper fees
         _strategy.setUniFees(_stg, _base, rewardToBaseFee[token]);
-        _strategy.setUniFees(_base ,address(asset), baseToAssetFee[token]);
-        vm.stopPrank();        
+        _strategy.setUniFees(_base, address(asset), baseToAssetFee[token]);
+        vm.stopPrank();
         return address(_strategy);
     }
 
@@ -193,31 +203,53 @@ contract Setup is ExtendedTest, IEvents {
     }
 
     function _mockRewards(uint256 _amount) internal {
-        deal(address(_stg), address(strategy), _amount * 1e18 / 200);
+        deal(address(_stg), address(strategy), (_amount * 1e18) / 200);
     }
 
     function _mockDeltaCredits() internal {
-        console2.log("credit before", IPool(address((strategy.pool()))).deltaCredit());
+        console2.log(
+            "credit before",
+            IPool(address((strategy.pool()))).deltaCredit()
+        );
         deal(address(asset), address(whale), type(uint256).max);
 
-        deal(address(strategy.lpToken()), address(_stargateRouter), type(uint256).max);
-        deal(address(strategy.lpToken()), address(strategy.pool()), type(uint256).max);
+        // @dev this is not working in foundry, lp token is exotic token
+        deal(
+            address(strategy.lpToken()),
+            address(_stargateRouter),
+            type(uint256).max
+        );
+        deal(
+            address(strategy.lpToken()),
+            address(strategy.pool()),
+            type(uint256).max
+        );
 
         vm.startPrank(whale);
         ERC20(asset).safeApprove(address(_stargateRouter), type(uint256).max);
-        IStargateRouter(address(_stargateRouter)).addLiquidity(strategy.poolId(), 1e24, address(whale));
+        IStargateRouter(address(_stargateRouter)).addLiquidity(
+            strategy.poolId(),
+            1e24,
+            address(whale)
+        );
         vm.stopPrank();
 
         skip(5 days);
         // vm.roll(block.number + 5);
 
-        IStargateRouter(address(_stargateRouter)).callDelta(strategy.poolId(), true);
+        IStargateRouter(address(_stargateRouter)).callDelta(
+            strategy.poolId(),
+            true
+        );
 
-
-        console2.log("credit after", IPool(address((strategy.pool()))).deltaCredit());
+        console2.log(
+            "credit after",
+            IPool(address((strategy.pool()))).deltaCredit()
+        );
         vm.roll(block.number + 5);
-        console2.log("credit after roll", IPool(address((strategy.pool()))).deltaCredit());
-        
+        console2.log(
+            "credit after roll",
+            IPool(address((strategy.pool()))).deltaCredit()
+        );
     }
-
 }

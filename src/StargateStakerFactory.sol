@@ -30,7 +30,16 @@ contract StargateStakerFactory {
         address _base
     ) external returns (address) {
         IStrategy newStrategy = IStrategy(
-            address(new StargateStaker(_asset, _name, _lpStaker, _stargateRouter, _stakingID, _base))
+            address(
+                new StargateStaker(
+                    _asset,
+                    _name,
+                    _lpStaker,
+                    _stargateRouter,
+                    _stakingID,
+                    _base
+                )
+            )
         );
 
         newStrategy.setPerformanceFeeRecipient(perfomanceFeeRecipient);
@@ -40,7 +49,7 @@ contract StargateStakerFactory {
         emit NewStargateStaker(address(newStrategy), _asset);
         return address(newStrategy);
     }
-    
+
     function setAddresses(
         address _management,
         address _perfomanceFeeRecipient,

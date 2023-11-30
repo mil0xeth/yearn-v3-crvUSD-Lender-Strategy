@@ -72,7 +72,11 @@ contract StargateStaker is BaseHealthCheck, UniswapV3Swapper {
         stargateRouter.instantRedeemLocal(poolId, _lpAmount, address(this)); // @dev withdraw
     }
 
-    function _harvestAndReport() internal override returns (uint256 _totalAssets) {
+    function _harvestAndReport()
+        internal
+        override
+        returns (uint256 _totalAssets)
+    {
         if (!TokenizedStrategy.isShutdown()) {
             _claimAndSellRewards();
             uint256 looseAsset = ERC20(asset).balanceOf(address(this));
@@ -80,9 +84,11 @@ contract StargateStaker is BaseHealthCheck, UniswapV3Swapper {
                 _deployFunds(looseAsset);
             }
         }
-        uint256 _totalLPTokenBalance =
-            lpToken.balanceOf(address(this)) + lpStaker.userInfo(stakingID, address(this)).amount;
-        _totalAssets = _lpToLd(_totalLPTokenBalance) + ERC20(asset).balanceOf(address(this));
+        uint256 _totalLPTokenBalance = lpToken.balanceOf(address(this)) +
+            lpStaker.userInfo(stakingID, address(this)).amount;
+        _totalAssets =
+            _lpToLd(_totalLPTokenBalance) +
+            ERC20(asset).balanceOf(address(this));
     }
 
     function _claimAndSellRewards() internal {
@@ -95,33 +101,54 @@ contract StargateStaker is BaseHealthCheck, UniswapV3Swapper {
         _freeFunds(Math.min(_amount, _ldToSd(pool.deltaCredit())));
     }
 
+    // LD -> Local decimals (underlying tokens decimals USDT-USDC-DAI)
+    // SD -> Shared decimals (lp tokens decimals)
+    // LP -> LP token, in SD decimals
+    // deltaCredit -> Available underlying token to redeem for, in SD decimals
+
     function _ldToLp(uint256 _amountLd) internal view returns (uint256) {
-        return _amountLd * pool.totalSupply() / pool.totalLiquidity() / convertRate;
+        return
+            (_amountLd * pool.totalSupply()) /
+            pool.totalLiquidity() /
+            convertRate;
     }
 
     function _lpToLd(uint256 _amountLp) internal view returns (uint256) {
-        return _amountLp * pool.totalLiquidity() * convertRate / pool.totalSupply();
+        return
+            (_amountLp * pool.totalLiquidity() * convertRate) /
+            pool.totalSupply();
     }
 
     function _ldToSd(uint256 _amountLd) internal view returns (uint256) {
-        return _amountLd * convertRate;
+        return _amountLd / convertRate;
+    }
+
+    function _sdToLd(uint256 _amountSd) internal view returns (uint256) {
+        return _amountSd * convertRate;
     }
 
     function _stakeLP(uint256 _amountToStake) internal {
         lpStaker.deposit(stakingID, _amountToStake);
     }
 
-    function availableWithdrawLimit(address _owner) public view override returns (uint256) {
-        return _ldToSd(pool.deltaCredit()) + TokenizedStrategy.totalIdle();
+    function availableWithdrawLimit(
+        address _owner
+    ) public view override returns (uint256) {
+        return _sdToLd(pool.deltaCredit()) + TokenizedStrategy.totalIdle();
     }
 
-    function setUniFees(address _token0, address _token1, uint24 _fee) external onlyManagement {
+    function setUniFees(
+        address _token0,
+        address _token1,
+        uint24 _fee
+    ) external onlyManagement {
         _setUniFees(_token0, _token1, _fee);
     }
 
-    function setMinAmountToSell(uint256 _minAmountToSell) external onlyManagement {
+    function setMinAmountToSell(
+        uint256 _minAmountToSell
+    ) external onlyManagement {
         minAmountToSell = _minAmountToSell;
         emit MinToSellUpdated(_minAmountToSell);
     }
-
 }
