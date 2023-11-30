@@ -92,7 +92,7 @@ contract StargateStaker is BaseHealthCheck, UniswapV3Swapper {
     }
 
     function _emergencyWithdraw(uint256 _amount) internal override {
-        _freeFunds(Math.min(_ldToLp(_amount), pool.deltaCredit()));
+        _freeFunds(Math.min(_amount, _ldToSd(pool.deltaCredit())));
     }
 
     function _ldToLp(uint256 _amountLd) internal view returns (uint256) {
@@ -103,12 +103,16 @@ contract StargateStaker is BaseHealthCheck, UniswapV3Swapper {
         return _amountLp * pool.totalLiquidity() * convertRate / pool.totalSupply();
     }
 
+    function _ldToSd(uint256 _amountLd) internal view returns (uint256) {
+        return _amountLd * convertRate;
+    }
+
     function _stakeLP(uint256 _amountToStake) internal {
         lpStaker.deposit(stakingID, _amountToStake);
     }
 
     function availableWithdrawLimit(address _owner) public view override returns (uint256) {
-        return pool.deltaCredit() + TokenizedStrategy.totalIdle();
+        return _ldToSd(pool.deltaCredit()) + TokenizedStrategy.totalIdle();
     }
 
     function setUniFees(address _token0, address _token1, uint24 _fee) external onlyManagement {
