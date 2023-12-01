@@ -2,213 +2,217 @@
 pragma solidity ^0.8.18;
 
 import "forge-std/console.sol";
-import {Setup} from "./utils/Setup.sol";
-import {Test, console2} from "forge-std/Test.sol"; //@todo: remove
+import { Setup } from "./utils/Setup.sol";
+import { Test, console2 } from "forge-std/Test.sol"; //@todo: remove
 import { IPool } from "src/interfaces/Stargate/IPool.sol";
 
 contract OperationTest is Setup {
-    function setUp() public override {
-        super.setUp();
-    }
+	function setUp() public override {
+		super.setUp();
+	}
 
-    function testSetupStrategyOK() public {
-        console.log("address of strategy", address(strategy));
-        assertTrue(address(0) != address(strategy));
-        assertEq(strategy.asset(), address(asset));
-        assertEq(strategy.management(), management);
-        assertEq(strategy.performanceFeeRecipient(), performanceFeeRecipient);
-        assertEq(strategy.keeper(), keeper);
-    }
+	function testSetupStrategyOK() public {
+		console.log("address of strategy", address(strategy));
+		assertTrue(address(0) != address(strategy));
+		assertEq(strategy.asset(), address(asset));
+		assertEq(strategy.management(), management);
+		assertEq(strategy.performanceFeeRecipient(), performanceFeeRecipient);
+		assertEq(strategy.keeper(), keeper);
+	}
 
-    function test_operation(uint256 _amount) public {
-        IPool pool = strategy.pool();
-        uint256 deltaCredit = pool.deltaCredit();
-        vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount && _amount > deltaCredit + 1);
+	function test_operation(uint256 _amount) public {
+		IPool pool = strategy.pool();
 
-        // Deposit into strategy
-        mintAndDepositIntoStrategy(strategy, user, _amount);
+		// convert delta credit to LD
+		uint256 deltaCredit = pool.deltaCredit();
+		deltaCredit = deltaCredit * pool.convertRate();
 
-        // Implement logic so totalDebt is _amount and totalIdle = 0.
-        checkStrategyTotals(strategy, _amount, _amount, 0);
+		vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount);
 
-        // Earn rewards
-        vm.roll(block.number + 100);
+		// Deposit into strategy
+		mintAndDepositIntoStrategy(strategy, user, _amount);
 
-        // Report profit
-        vm.prank(keeper);
-        (uint256 profit, uint256 loss) = strategy.report();
+		// Implement logic so totalDebt is _amount and totalIdle = 0.
+		checkStrategyTotals(strategy, _amount, _amount, 0);
 
-        // Check return Values
-        assertGe(profit, 0, "!profit");
-        assertEq(loss, 0, "!loss");
+		// Earn rewards
+		vm.roll(block.number + 100);
 
-        skip(strategy.profitMaxUnlockTime());
+		// Report profit
+		vm.prank(keeper);
+		(uint256 profit, uint256 loss) = strategy.report();
 
-        uint256 balanceBefore = asset.balanceOf(user);
+		// Check return Values
+		assertGe(profit, 0, "!profit");
+		assertEq(loss, 0, "!loss");
 
-        // Withdraw all funds
-        vm.prank(user);
-        strategy.redeem(_amount, user, user);
+		skip(strategy.profitMaxUnlockTime());
 
-        assertGe(
-            asset.balanceOf(user),
-            balanceBefore + _amount,
-            "!final balance"
-        );
-    }
+		uint256 balanceBefore = asset.balanceOf(user);
 
-    function test_profitableReport(
-        uint256 _amount,
-        uint16 _profitFactor
-    ) public {
-        IPool pool = strategy.pool();
-        uint256 deltaCredit = pool.deltaCredit();
-        vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount && _amount > deltaCredit + 1);
-        _profitFactor = uint16(bound(uint256(_profitFactor), 10, MAX_BPS));
+		// Withdraw all funds
+		vm.prank(user);
+		strategy.redeem(_amount, user, user);
 
-        // Deposit into strategy
-        mintAndDepositIntoStrategy(strategy, user, _amount);
+		assertGe(asset.balanceOf(user), balanceBefore + _amount, "!final balance");
+	}
 
-        // TODO: Implement logic so totalDebt is _amount and totalIdle = 0.
-        checkStrategyTotals(strategy, _amount, _amount, 0);
+	function test_profitableReport(uint256 _amount, uint16 _profitFactor) public {
+		IPool pool = strategy.pool();
+		// delta credit is in SD, amount is in LD
+		uint256 deltaCredit = pool.deltaCredit();
+		deltaCredit = deltaCredit * pool.convertRate();
 
-        // Earn Interest
-        skip(1 days);
-        _mockRewards(_amount);
+		vm.assume(
+			_amount > minFuzzAmount &&
+				_amount < maxFuzzAmount &&
+		);
+		_profitFactor = uint16(bound(uint256(_profitFactor), 10, MAX_BPS));
 
-        // TODO: implement logic to simulate earning interest.
-        uint256 toAirdrop = (_amount * _profitFactor) / MAX_BPS;
-        airdrop(asset, address(strategy), toAirdrop);
+		// Deposit into strategy
+		mintAndDepositIntoStrategy(strategy, user, _amount);
 
-        // Report profit
-        vm.prank(keeper);
-        (uint256 profit, uint256 loss) = strategy.report();
+		// TODO: Implement logic so totalDebt is _amount and totalIdle = 0.
+		checkStrategyTotals(strategy, _amount, _amount, 0);
 
-        // Check return Values
-        assertGe(profit, toAirdrop, "!profit");
-        assertEq(loss, 0, "!loss");
+		// Earn Interest
+		skip(1 days);
+		_mockRewards(_amount);
 
-        skip(strategy.profitMaxUnlockTime());
+		// TODO: implement logic to simulate earning interest.
+		uint256 toAirdrop = (_amount * _profitFactor) / MAX_BPS;
+		airdrop(asset, address(strategy), toAirdrop);
 
-        uint256 balanceBefore = asset.balanceOf(user);
+		// Report profit
+		vm.prank(keeper);
+		(uint256 profit, uint256 loss) = strategy.report();
 
-        // Withdraw all funds
-        vm.prank(user);
-        strategy.redeem(_amount, user, user);
+		// Check return Values
+		assertGe(profit, toAirdrop, "!profit");
+		assertEq(loss, 0, "!loss");
 
-        assertGe(
-            asset.balanceOf(user),
-            balanceBefore + _amount,
-            "!final balance"
-        );
-    }
+		skip(strategy.profitMaxUnlockTime());
 
-    function test_profitableReport_withFees(
-        uint256 _amount,
-        uint16 _profitFactor
-    ) public {
-        IPool pool = strategy.pool();
-        uint256 deltaCredit = pool.deltaCredit();
-        vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount && _amount > deltaCredit + 1);
-        _profitFactor = uint16(bound(uint256(_profitFactor), 10, MAX_BPS));
+		uint256 balanceBefore = asset.balanceOf(user);
 
-        // Set protocol fee to 0 and perf fee to 10%
-        setFees(0, 1_000);
+		// Withdraw all funds
+		vm.prank(user);
+		strategy.redeem(_amount, user, user);
 
-        // Deposit into strategy
-        mintAndDepositIntoStrategy(strategy, user, _amount);
+		assertGe(asset.balanceOf(user), balanceBefore + _amount, "!final balance");
+	}
 
-        // TODO: Implement logic so totalDebt is _amount and totalIdle = 0.
-        checkStrategyTotals(strategy, _amount, _amount, 0);
+	function test_profitableReport_withFees(
+		uint256 _amount,
+		uint16 _profitFactor
+	) public {
+		IPool pool = strategy.pool();
+		uint256 deltaCredit = pool.deltaCredit();
+		deltaCredit = deltaCredit * pool.convertRate();
+		vm.assume(
+			_amount > minFuzzAmount &&
+				_amount < maxFuzzAmount &&
+		);
+		_profitFactor = uint16(bound(uint256(_profitFactor), 10, MAX_BPS));
 
-        // Earn Interest
-        skip(1 days);
-        _mockRewards(_amount);
+		// Set protocol fee to 0 and perf fee to 10%
+		setFees(0, 1_000);
 
-        // TODO: implement logic to simulate earning interest.
-        uint256 toAirdrop = (_amount * _profitFactor) / MAX_BPS;
-        airdrop(asset, address(strategy), toAirdrop);
+		// Deposit into strategy
+		mintAndDepositIntoStrategy(strategy, user, _amount);
 
-        // Report profit
-        vm.prank(keeper);
-        (uint256 profit, uint256 loss) = strategy.report();
+		// TODO: Implement logic so totalDebt is _amount and totalIdle = 0.
+		checkStrategyTotals(strategy, _amount, _amount, 0);
 
-        // Check return Values
-        assertGe(profit, toAirdrop, "!profit");
-        assertEq(loss, 0, "!loss");
+		// Earn Interest
+		skip(1 days);
+		_mockRewards(_amount);
 
-        skip(strategy.profitMaxUnlockTime());
+		// TODO: implement logic to simulate earning interest.
+		uint256 toAirdrop = (_amount * _profitFactor) / MAX_BPS;
+		airdrop(asset, address(strategy), toAirdrop);
 
-        // Get the expected fee
-        uint256 expectedShares = (profit * 1_000) / MAX_BPS;
+		// Report profit
+		vm.prank(keeper);
+		(uint256 profit, uint256 loss) = strategy.report();
 
-        assertEq(strategy.balanceOf(performanceFeeRecipient), expectedShares);
+		// Check return Values
+		assertGe(profit, toAirdrop, "!profit");
+		assertEq(loss, 0, "!loss");
 
-        uint256 balanceBefore = asset.balanceOf(user);
+		skip(strategy.profitMaxUnlockTime());
 
-        // Withdraw all funds
-        vm.prank(user);
-        strategy.redeem(_amount, user, user);
+		// Get the expected fee
+		uint256 expectedShares = (profit * 1_000) / MAX_BPS;
 
-        assertGe(
-            asset.balanceOf(user),
-            balanceBefore + _amount,
-            "!final balance"
-        );
+		assertEq(strategy.balanceOf(performanceFeeRecipient), expectedShares);
 
-        vm.prank(performanceFeeRecipient);
-        strategy.redeem(
-            expectedShares,
-            performanceFeeRecipient,
-            performanceFeeRecipient
-        );
+		uint256 balanceBefore = asset.balanceOf(user);
 
-        checkStrategyTotals(strategy, 0, 0, 0);
+		// Withdraw all funds
+		vm.prank(user);
+		strategy.redeem(_amount, user, user);
 
-        assertGe(
-            asset.balanceOf(performanceFeeRecipient),
-            expectedShares,
-            "!perf fee out"
-        );
-    }
+		assertGe(asset.balanceOf(user), balanceBefore + _amount, "!final balance");
 
-    function test_tendTrigger(uint256 _amount) public {
-        IPool pool = strategy.pool();
-        uint256 deltaCredit = pool.deltaCredit();
-        vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount && _amount > deltaCredit + 1);
+		vm.prank(performanceFeeRecipient);
+		strategy.redeem(
+			expectedShares,
+			performanceFeeRecipient,
+			performanceFeeRecipient
+		);
 
-        (bool trigger, ) = strategy.tendTrigger();
-        assertTrue(!trigger);
+		checkStrategyTotals(strategy, 0, 0, 0);
 
-        // Deposit into strategy
-        mintAndDepositIntoStrategy(strategy, user, _amount);
+		assertGe(
+			asset.balanceOf(performanceFeeRecipient),
+			expectedShares,
+			"!perf fee out"
+		);
+	}
 
-        (trigger, ) = strategy.tendTrigger();
-        assertTrue(!trigger);
+	function test_tendTrigger(uint256 _amount) public {
+		IPool pool = strategy.pool();
+		uint256 deltaCredit = pool.deltaCredit();
+		deltaCredit = deltaCredit * pool.convertRate();
+		vm.assume(
+			_amount > minFuzzAmount &&
+				_amount < maxFuzzAmount &&
+				_amount > deltaCredit + 1
+		);
 
-        // Skip some time
-        skip(1 days);
-        _mockRewards(_amount);
+		(bool trigger, ) = strategy.tendTrigger();
+		assertTrue(!trigger);
 
-        (trigger, ) = strategy.tendTrigger();
-        assertTrue(!trigger);
+		// Deposit into strategy
+		mintAndDepositIntoStrategy(strategy, user, _amount);
 
-        vm.prank(keeper);
-        strategy.report();
+		(trigger, ) = strategy.tendTrigger();
+		assertTrue(!trigger);
 
-        (trigger, ) = strategy.tendTrigger();
-        assertTrue(!trigger);
+		// Skip some time
+		skip(1 days);
+		_mockRewards(_amount);
 
-        // Unlock Profits
-        skip(strategy.profitMaxUnlockTime());
+		(trigger, ) = strategy.tendTrigger();
+		assertTrue(!trigger);
 
-        (trigger, ) = strategy.tendTrigger();
-        assertTrue(!trigger);
+		vm.prank(keeper);
+		strategy.report();
 
-        vm.prank(user);
-        strategy.redeem(_amount, user, user);
+		(trigger, ) = strategy.tendTrigger();
+		assertTrue(!trigger);
 
-        (trigger, ) = strategy.tendTrigger();
-        assertTrue(!trigger);
-    }
+		// Unlock Profits
+		skip(strategy.profitMaxUnlockTime());
+
+		(trigger, ) = strategy.tendTrigger();
+		assertTrue(!trigger);
+
+		vm.prank(user);
+		strategy.redeem(_amount, user, user);
+
+		(trigger, ) = strategy.tendTrigger();
+		assertTrue(!trigger);
+	}
 }
