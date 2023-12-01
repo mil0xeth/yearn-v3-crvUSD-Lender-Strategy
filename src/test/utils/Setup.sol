@@ -205,51 +205,5 @@ contract Setup is ExtendedTest, IEvents {
     function _mockRewards(uint256 _amount) internal {
         deal(address(_stg), address(strategy), (_amount * 1e18) / 200);
     }
-
-    function _mockDeltaCredits() internal {
-        console2.log(
-            "credit before",
-            IPool(address((strategy.pool()))).deltaCredit()
-        );
-        deal(address(asset), address(whale), type(uint256).max);
-
-        // @dev this is not working in foundry, lp token is exotic token
-        deal(
-            address(strategy.lpToken()),
-            address(_stargateRouter),
-            type(uint256).max
-        );
-        deal(
-            address(strategy.lpToken()),
-            address(strategy.pool()),
-            type(uint256).max
-        );
-
-        vm.startPrank(whale);
-        ERC20(asset).safeApprove(address(_stargateRouter), type(uint256).max);
-        IStargateRouter(address(_stargateRouter)).addLiquidity(
-            strategy.poolId(),
-            1e24,
-            address(whale)
-        );
-        vm.stopPrank();
-
-        skip(5 days);
-        // vm.roll(block.number + 5);
-
-        IStargateRouter(address(_stargateRouter)).callDelta(
-            strategy.poolId(),
-            true
-        );
-
-        console2.log(
-            "credit after",
-            IPool(address((strategy.pool()))).deltaCredit()
-        );
-        vm.roll(block.number + 5);
-        console2.log(
-            "credit after roll",
-            IPool(address((strategy.pool()))).deltaCredit()
-        );
-    }
+    
 }

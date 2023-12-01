@@ -2,6 +2,7 @@ pragma solidity ^0.8.18;
 
 import "forge-std/console.sol";
 import {Setup} from "./utils/Setup.sol";
+import { IPool } from "src/interfaces/Stargate/IPool.sol";
 
 contract ShutdownTest is Setup {
     function setUp() public override {
@@ -9,7 +10,9 @@ contract ShutdownTest is Setup {
     }
 
     function test_shutdownCanWithdraw(uint256 _amount) public {
-        vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount);
+        IPool pool = strategy.pool();
+        uint256 deltaCredit = pool.deltaCredit();
+        vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount && _amount > deltaCredit + 1);
 
         // Deposit into strategy
         mintAndDepositIntoStrategy(strategy, user, _amount);

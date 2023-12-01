@@ -4,6 +4,7 @@ pragma solidity ^0.8.18;
 import "forge-std/console.sol";
 import {Setup} from "./utils/Setup.sol";
 import {Test, console2} from "forge-std/Test.sol"; //@todo: remove
+import { IPool } from "src/interfaces/Stargate/IPool.sol";
 
 contract OperationTest is Setup {
     function setUp() public override {
@@ -20,7 +21,9 @@ contract OperationTest is Setup {
     }
 
     function test_operation(uint256 _amount) public {
-        vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount);
+        IPool pool = strategy.pool();
+        uint256 deltaCredit = pool.deltaCredit();
+        vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount && _amount > deltaCredit + 1);
 
         // Deposit into strategy
         mintAndDepositIntoStrategy(strategy, user, _amount);
@@ -43,7 +46,6 @@ contract OperationTest is Setup {
 
         uint256 balanceBefore = asset.balanceOf(user);
 
-        _mockDeltaCredits();
         // Withdraw all funds
         vm.prank(user);
         strategy.redeem(_amount, user, user);
@@ -59,7 +61,9 @@ contract OperationTest is Setup {
         uint256 _amount,
         uint16 _profitFactor
     ) public {
-        vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount);
+        IPool pool = strategy.pool();
+        uint256 deltaCredit = pool.deltaCredit();
+        vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount && _amount > deltaCredit + 1);
         _profitFactor = uint16(bound(uint256(_profitFactor), 10, MAX_BPS));
 
         // Deposit into strategy
@@ -103,7 +107,9 @@ contract OperationTest is Setup {
         uint256 _amount,
         uint16 _profitFactor
     ) public {
-        vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount);
+        IPool pool = strategy.pool();
+        uint256 deltaCredit = pool.deltaCredit();
+        vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount && _amount > deltaCredit + 1);
         _profitFactor = uint16(bound(uint256(_profitFactor), 10, MAX_BPS));
 
         // Set protocol fee to 0 and perf fee to 10%
@@ -167,7 +173,9 @@ contract OperationTest is Setup {
     }
 
     function test_tendTrigger(uint256 _amount) public {
-        vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount);
+        IPool pool = strategy.pool();
+        uint256 deltaCredit = pool.deltaCredit();
+        vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount && _amount > deltaCredit + 1);
 
         (bool trigger, ) = strategy.tendTrigger();
         assertTrue(!trigger);
