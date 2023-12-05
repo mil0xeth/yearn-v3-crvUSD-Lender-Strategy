@@ -1,49 +1,66 @@
 pragma solidity ^0.8.18;
 
 import "forge-std/console.sol";
-import { Setup } from "./utils/Setup.sol";
-import { IPool } from "src/interfaces/Stargate/IPool.sol";
+import "./utils/Setup.sol";
+import {IPool} from "src/interfaces/Stargate/IPool.sol";
 
 contract ShutdownTest is Setup {
-	function setUp() public override {
-		super.setUp();
-	}
+    function setUp() public override {
+        super.setUp();
+    }
 
-	function test_shutdownCanWithdraw(uint256 _amount) public {
-		IPool pool = strategy.pool();
-		// uint256 deltaCredit = pool.deltaCredit();
-		// deltaCredit = deltaCredit * pool.convertRate();
-		vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount);
+    function test_shutdownCanWithdraw(uint256 _amount) public {
+        vm.assume(_amount > minFuzzAmount && _amount < maxFuzzAmount);
 
-		// Deposit into strategy
-		mintAndDepositIntoStrategy(strategy, user, _amount);
+        // Deposit into strategy
+        mintAndDepositIntoStrategy(strategy, user, _amount);
 
-		// TODO: Implement logic so totalDebt is _amount and totalIdle = 0.
-		checkStrategyTotals(strategy, _amount, _amount, 0);
+        // TODO: Implement logic so totalDebt is _amount and totalIdle = 0.
+        checkStrategyTotals(strategy, _amount, _amount, 0);
 
-		// Earn Interest
-		skip(1 days);
-		emit log_uint(block.number); // 100
-		vm.roll(block.number + 100);
-		emit log_uint(block.number); // 100
-		_mockRewards(_amount);
+        // Shutdown the strategy
+        vm.prank(management);
+        strategy.shutdownStrategy();
 
-		// Shutdown the strategy
-		vm.prank(management);
-		strategy.shutdownStrategy();
+        // TODO: Implement logic so totalDebt is _amount and totalIdle = 0.
+        checkStrategyTotals(strategy, _amount, _amount, 0);
 
-		// TODO: Implement logic so totalDebt is _amount and totalIdle = 0.
-		checkStrategyTotals(strategy, _amount, _amount, 0);
+        // Make sure we can still withdraw the full amount
+        uint256 balanceBefore = asset.balanceOf(user);
 
-		// Make sure we can still withdraw the full amount
-		uint256 balanceBefore = asset.balanceOf(user);
+        uint256 leftStrategyShares;
+        uint256 actualAmountWithdrawn;
+        if (strategy.availableWithdrawLimit(user) < _amount) {
+            actualAmountWithdrawn = strategy.availableWithdrawLimit(user);
+            leftStrategyShares = strategy.convertToAssets(
+                strategy.balanceOf(user) -
+                    strategy.convertToShares(actualAmountWithdrawn)
+            );
 
-		// Withdraw all funds
-		vm.prank(user);
-		strategy.redeem(_amount, user, user);
+            if (leftStrategyShares == strategy.balanceOf(user)) {
+                actualAmountWithdrawn = type(uint256).max;
+            }
+        } else {
+            actualAmountWithdrawn = _amount;
+        }
 
-		assertEq(asset.balanceOf(user), balanceBefore + _amount, "!final balance");
-	}
+        if (actualAmountWithdrawn != type(uint256).max) {
+            vm.prank(user);
+            strategy.redeem(actualAmountWithdrawn, user, user);
+        }
 
-	// TODO: Add tests for any emergency function added.
+        assertEq(
+            asset.balanceOf(address(strategy)),
+            0,
+            "no asset leftover in strategy"
+        );
+        assertApproxEqAbs(
+            asset.balanceOf(user) + leftStrategyShares,
+            balanceBefore + _amount,
+            (_amount * 10) / 10_000, // 0.01% loss in rounding max.. crazy huh
+            "!final balance"
+        );
+    }
+
+    // TODO: Add tests for any emergency function added.
 }

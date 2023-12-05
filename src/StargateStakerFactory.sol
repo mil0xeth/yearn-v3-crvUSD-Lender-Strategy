@@ -26,8 +26,7 @@ contract StargateStakerFactory {
         string memory _name,
         address _lpStaker,
         address _stargateRouter,
-        uint16 _stakingID,
-        address _base
+        uint16 _stakingID
     ) external returns (address) {
         IStrategy newStrategy = IStrategy(
             address(
@@ -36,8 +35,7 @@ contract StargateStakerFactory {
                     _name,
                     _lpStaker,
                     _stargateRouter,
-                    _stakingID,
-                    _base
+                    _stakingID
                 )
             )
         );
