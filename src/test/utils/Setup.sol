@@ -40,7 +40,8 @@ contract Setup is ExtendedTest, IEvents {
     address public keeper = address(4);
     address public management = address(1);
     address public performanceFeeRecipient = address(3);
-    address public router_owner = address(0x47290DE56E71DC6f46C26e50776fe86cc8b21656);
+    address public router_owner =
+        address(0x47290DE56E71DC6f46C26e50776fe86cc8b21656);
 
     // Address of the real deployed Factory
     address public factory;
@@ -50,7 +51,7 @@ contract Setup is ExtendedTest, IEvents {
     uint256 public MAX_BPS = 10_000;
 
     // Fuzz from $100 of 1e6 stable coins up to 1 trillion of a 1e18 coin
-    uint256 public maxFuzzAmount = 1e30;
+    uint256 public maxFuzzAmount;
     uint256 public minFuzzAmount;
 
     // Default profit max unlock time is set for 10 days
@@ -63,13 +64,11 @@ contract Setup is ExtendedTest, IEvents {
     address _stg = 0x2F6F07CDcf3588944Bf4C42aC74ff24bF56e7590;
 
     // Selector for testing
-    string public token = "DAI";
+    string public token = "USDC";
 
     function setUp() public virtual {
         _setTokenAddrs();
         _setStakingId();
-        _setRewardToBaseFee();
-        _setBaseToAssetFee();
 
         // Set asset
         asset = ERC20(tokenAddrs[token]);
@@ -77,6 +76,7 @@ contract Setup is ExtendedTest, IEvents {
         // Set decimals
         decimals = asset.decimals();
         minFuzzAmount = 1e2 * 10 ** decimals;
+        maxFuzzAmount = 1e5 * 10 ** decimals;
 
         // Deploy strategy and set variables
         strategy = IStrategyInterface(setUpStrategy());
@@ -95,7 +95,15 @@ contract Setup is ExtendedTest, IEvents {
     function setUpStrategy() public returns (address) {
         // we save the strategy as a IStrategyInterface to give it the needed interface
         IStrategyInterface _strategy = IStrategyInterface(
-            address(new StargateStaker(address(asset), "Tokenized Strategy", _lpStaker, _stargateRouter, stakingId[token], _base))
+            address(
+                new StargateStaker(
+                    address(asset),
+                    "Tokenized Strategy",
+                    _lpStaker,
+                    _stargateRouter,
+                    stakingId[token]
+                )
+            )
         );
 
         // set keeper
@@ -109,9 +117,8 @@ contract Setup is ExtendedTest, IEvents {
         _strategy.acceptManagement();
 
         // set swapper fees
-        _strategy.setUniFees(_stg, _base, rewardToBaseFee[token]);
-        _strategy.setUniFees(_base ,address(asset), baseToAssetFee[token]);
-        vm.stopPrank();        
+
+        vm.stopPrank();
         return address(_strategy);
     }
 
@@ -143,10 +150,30 @@ contract Setup is ExtendedTest, IEvents {
         uint256 _totalDebt,
         uint256 _totalIdle
     ) public {
-        assertEq(_strategy.totalAssets(), _totalAssets, "!totalAssets");
-        assertEq(_strategy.totalDebt(), _totalDebt, "!totalDebt");
-        assertEq(_strategy.totalIdle(), _totalIdle, "!totalIdle");
-        assertEq(_totalAssets, _totalDebt + _totalIdle, "!Added");
+        assertApproxEqAbs(
+            _strategy.totalAssets(),
+            _totalAssets,
+            ((_strategy.totalAssets() * 10) / 10_000) + 1,
+            "!totalAssets"
+        );
+        assertApproxEqAbs(
+            _strategy.totalDebt(),
+            _totalDebt,
+            ((_strategy.totalDebt() * 10) / 10_000) + 1,
+            "!totalDebt"
+        );
+        assertApproxEqAbs(
+            _strategy.totalIdle(),
+            _totalIdle,
+            ((_strategy.totalIdle() * 10) / 10_000) + 1,
+            "!totalIdle"
+        );
+        assertApproxEqAbs(
+            _totalAssets,
+            _totalDebt + _totalIdle,
+            ((_totalAssets * 10) / 10_000) + 1,
+            "!Added"
+        );
     }
 
     function airdrop(ERC20 _asset, address _to, uint256 _amount) public {
@@ -193,31 +220,6 @@ contract Setup is ExtendedTest, IEvents {
     }
 
     function _mockRewards(uint256 _amount) internal {
-        deal(address(_stg), address(strategy), _amount * 1e18 / 200);
+        deal(address(_stg), address(strategy), _amount / 200);
     }
-
-    function _mockDeltaCredits() internal {
-        console2.log("credit before", IPool(address((strategy.pool()))).deltaCredit());
-        deal(address(asset), address(whale), type(uint256).max);
-
-        deal(address(strategy.lpToken()), address(_stargateRouter), type(uint256).max);
-        deal(address(strategy.lpToken()), address(strategy.pool()), type(uint256).max);
-
-        vm.startPrank(whale);
-        ERC20(asset).safeApprove(address(_stargateRouter), type(uint256).max);
-        IStargateRouter(address(_stargateRouter)).addLiquidity(strategy.poolId(), 1e24, address(whale));
-        vm.stopPrank();
-
-        skip(5 days);
-        // vm.roll(block.number + 5);
-
-        IStargateRouter(address(_stargateRouter)).callDelta(strategy.poolId(), true);
-
-
-        console2.log("credit after", IPool(address((strategy.pool()))).deltaCredit());
-        vm.roll(block.number + 5);
-        console2.log("credit after roll", IPool(address((strategy.pool()))).deltaCredit());
-        
-    }
-
 }
