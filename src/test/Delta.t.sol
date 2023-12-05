@@ -19,14 +19,6 @@ contract DeltaTest is Setup {
     }
 
     function test_increase_delta_credit() public {
-        console2.log("Testing for", strategy.asset());
-        console2.log(
-            "Block #",
-            block.number,
-            "Initial deltaCredit =",
-            IPool(address((strategy.pool()))).deltaCredit()
-        );
-
         deal(address(asset), address(whale), type(uint256).max);
 
         // set-up fees and delta params
@@ -57,12 +49,6 @@ contract DeltaTest is Setup {
             true
         );
         vm.roll(block.number + 1);
-        console2.log(
-            "Block #",
-            block.number,
-            "deltaCredit =",
-            IPool(address((strategy.pool()))).deltaCredit()
-        );
 
         // add big amount + call delta
         IStargateRouter(address(_stargateRouter)).addLiquidity(
@@ -75,12 +61,6 @@ contract DeltaTest is Setup {
             true
         );
         vm.roll(block.number + 1);
-        console2.log(
-            "Block #",
-            block.number,
-            "deltaCredit =",
-            IPool(address((strategy.pool()))).deltaCredit()
-        );
 
         vm.stopPrank();
     }

@@ -21,6 +21,8 @@ import {IStargateRouter} from "./interfaces/Stargate/IStargateRouter.sol";
 contract StargateStaker is BaseHealthCheck, UniswapV2Swapper {
     using SafeERC20 for ERC20;
 
+    uint256 public maxAmountToSell = 250 * 1e18;
+
     ILPStaking public immutable lpStaker;
     IStargateRouter public immutable stargateRouter;
     IPool public immutable pool;
@@ -33,6 +35,7 @@ contract StargateStaker is BaseHealthCheck, UniswapV2Swapper {
     ERC20 public immutable lpToken;
 
     event MinToSellUpdated(uint256 newMinAmountToSell);
+    event MaxToSellUpdated(uint256 newMaxAmountToSell);
 
     constructor(
         address _asset,
@@ -100,7 +103,7 @@ contract StargateStaker is BaseHealthCheck, UniswapV2Swapper {
     function _claimAndSellRewards() internal {
         _stakeLP(0); // @dev claim rewards
         uint256 _rewardBalance = reward.balanceOf(address(this));
-        _swapFrom(address(reward), address(asset), _rewardBalance, 0);
+        _swapFrom(address(reward), address(asset), Math.min(_rewardBalance, maxAmountToSell), 0);
     }
 
     function _emergencyWithdraw(uint256 _amount) internal override {
@@ -146,6 +149,13 @@ contract StargateStaker is BaseHealthCheck, UniswapV2Swapper {
     ) external onlyManagement {
         minAmountToSell = _minAmountToSell;
         emit MinToSellUpdated(_minAmountToSell);
+    }
+
+    function setMaxAmountToSell(
+        uint256 _maxAmountToSell
+    ) external onlyManagement {
+        maxAmountToSell = _maxAmountToSell;
+        emit MaxToSellUpdated(_maxAmountToSell);
     }
 
     function setBase(address _base) external onlyManagement {
