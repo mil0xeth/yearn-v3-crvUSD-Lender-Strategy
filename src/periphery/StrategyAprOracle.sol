@@ -13,6 +13,7 @@ interface IStrategy {
     function reward() external view returns (address);
     function lpStaker() external view returns (address);
     function lpToken() external view returns (address);
+    function decimals() external view returns (uint256);
 }
 
 interface ILPStaking {
@@ -70,10 +71,11 @@ contract StrategyAprOracle is AprOracleBase, UniswapV2Swapper {
         uint256 stakingID = strategy.stakingID();
         uint256 poolShareBps = (lpStaking.poolInfo(stakingID).allocPoint * 1e4 / lpStaking.totalAllocPoint());
         uint256 poolRewardsPerBlock = lpStaking.stargatePerBlock()  * poolShareBps / 10_000;
-        uint256 yearlyRewardsInAsset = _getAmountOut(strategy.reward(), strategy.asset(), poolRewardsPerBlock) * blockPerYear;
+        uint256 yearlyRewardsInAsset = _getAmountOut(strategy.reward(), strategy.asset(), poolRewardsPerBlock) * blockPerYear; // 1e6 or 1e18
+        uint256 multiplier = (strategy.decimals() == 6) ? 1e18 : 1e6;
         if (_delta < 0) {
-            return yearlyRewardsInAsset * 1e18 / (lpToken.totalLiquidity() - uint256(-_delta));
+            return yearlyRewardsInAsset * multiplier / (lpToken.totalLiquidity() - uint256(-_delta));
         }
-        return yearlyRewardsInAsset * 1e18 / (lpToken.totalLiquidity() + uint256(_delta));
+        return yearlyRewardsInAsset * multiplier / (lpToken.totalLiquidity() + uint256(_delta));
     }
 }
