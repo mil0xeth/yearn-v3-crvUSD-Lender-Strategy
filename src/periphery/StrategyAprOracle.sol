@@ -27,6 +27,7 @@ interface ILPStaking {
     function poolInfo(uint256 _index) external view returns (PoolInfo memory);
     function totalAllocPoint() external view returns (uint256);
     function getMultiplier(uint256 _from, uint256 _to) external view returns (uint256);
+    function lpBalances(uint256) external view returns (uint256);
 }
 
 interface ILPToken {
@@ -35,7 +36,7 @@ interface ILPToken {
 
 contract StrategyAprOracle is AprOracleBase, UniswapV2Swapper {
 
-    uint256 constant blockPerYear = 15_768_000; // based on 2s block on Polygon
+    uint256 constant blockPerYear = 14_409_869; // based on 2.1885s block on Polygon
 
     constructor() AprOracleBase("Stargate Staker Oracle", msg.sender) {
         router = 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506; // default to sushiswap v2
@@ -67,15 +68,16 @@ contract StrategyAprOracle is AprOracleBase, UniswapV2Swapper {
     ) external view override returns (uint256) {
         IStrategy strategy = IStrategy(_strategy);
         ILPStaking lpStaking = ILPStaking(strategy.lpStaker());
-        ILPToken lpToken = ILPToken(strategy.lpToken());
         uint256 stakingID = strategy.stakingID();
         uint256 poolShareBps = (lpStaking.poolInfo(stakingID).allocPoint * 1e4 / lpStaking.totalAllocPoint());
         uint256 poolRewardsPerBlock = lpStaking.stargatePerBlock()  * poolShareBps / 10_000;
-        uint256 yearlyRewardsInAsset = _getAmountOut(strategy.reward(), strategy.asset(), poolRewardsPerBlock) * blockPerYear; // 1e6 or 1e18
+        uint256 yearlyRewardsInAsset = _getAmountOut(strategy.reward(), strategy.asset(), poolRewardsPerBlock) * blockPerYear;
         uint256 multiplier = (strategy.decimals() == 6) ? 1e18 : 1e6;
+        
         if (_delta < 0) {
-            return yearlyRewardsInAsset * multiplier / (lpToken.totalLiquidity() - uint256(-_delta));
+            return yearlyRewardsInAsset * multiplier / (lpStaking.lpBalances(strategy.stakingID()) - uint256(-_delta));
         }
-        return yearlyRewardsInAsset * multiplier / (lpToken.totalLiquidity() + uint256(_delta));
+
+        return yearlyRewardsInAsset * multiplier / (lpStaking.lpBalances(strategy.stakingID()) + uint256(_delta));
     }
 }
