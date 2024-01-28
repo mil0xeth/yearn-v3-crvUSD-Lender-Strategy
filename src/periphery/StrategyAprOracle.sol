@@ -2,7 +2,7 @@
 pragma solidity 0.8.18;
 
 import {AprOracleBase} from "@periphery/AprOracle/AprOracleBase.sol";
-import {UniswapV2Swapper} from "@periphery/swappers/UniswapV2Swapper.sol";
+import {UniswapV3Swapper} from "@periphery/swappers/UniswapV3Swapper.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IStrategy {
@@ -23,7 +23,7 @@ interface ILPStaking {
         uint256 lastRewardBlock;
         uint256 accStargatePerShare;
     }
-    function stargatePerBlock() external view returns (uint256);
+    function eTokenPerSecond() external view returns (uint256);
     function poolInfo(uint256 _index) external view returns (PoolInfo memory);
     function totalAllocPoint() external view returns (uint256);
     function getMultiplier(uint256 _from, uint256 _to) external view returns (uint256);
@@ -34,13 +34,11 @@ interface ILPToken {
     function totalLiquidity() external view returns (uint256);
 }
 
-contract StrategyAprOracle is AprOracleBase, UniswapV2Swapper {
-
-    uint256 constant blockPerYear = 14_409_869; // based on 2.1885s block on Polygon
+contract StrategyAprOracle is AprOracleBase, UniswapV3Swapper {
 
     constructor() AprOracleBase("Stargate Staker Oracle", msg.sender) {
-        router = 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506; // default to sushiswap v2
-        base = 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174; // usdc_e
+        router = 0xE592427A0AEce92De3Edee1F18E0157C05861564; // default to Uniswap V3
+        base = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1; // WETH
     }
 
     /**
@@ -70,8 +68,8 @@ contract StrategyAprOracle is AprOracleBase, UniswapV2Swapper {
         ILPStaking lpStaking = ILPStaking(strategy.lpStaker());
         uint256 stakingID = strategy.stakingID();
         uint256 poolShareBps = (lpStaking.poolInfo(stakingID).allocPoint * 1e4 / lpStaking.totalAllocPoint());
-        uint256 poolRewardsPerBlock = lpStaking.stargatePerBlock()  * poolShareBps / 10_000;
-        uint256 yearlyRewardsInAsset = _getAmountOut(strategy.reward(), strategy.asset(), poolRewardsPerBlock) * blockPerYear;
+        uint256 poolRewardsPerSecond = lpStaking.eTokenPerSecond()  * poolShareBps / 10_000;
+        uint256 yearlyRewardsInAsset = _getAmountOut(strategy.reward(), strategy.asset(), poolRewardsPerSecond) * 31_536_000;
         uint256 multiplier = (strategy.decimals() == 6) ? 1e18 : 1e6;
         
         if (_delta < 0) {

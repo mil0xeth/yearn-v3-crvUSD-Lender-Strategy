@@ -36,7 +36,7 @@ contract Setup is ExtendedTest, IEvents {
 
     // Addresses for different roles we will use repeatedly.
     address public user = address(10);
-    address public whale = address(0x65bb797c2B9830d891D87288F029ed8dACc19705);
+    address public whale = address(0x9CD50907aeb5D16F29Bddf7e1aBb10018Ee8717d);
     address public keeper = address(4);
     address public management = address(1);
     address public performanceFeeRecipient = address(3);
@@ -58,9 +58,9 @@ contract Setup is ExtendedTest, IEvents {
     uint256 public profitMaxUnlockTime = 10 days;
 
     // Constructor specific params
-    address _lpStaker = 0x8731d54E9D02c286767d56ac03e8037C07e01e98;
-    address _stargateRouter = 0x45A01E4e04F14f7A4a6702c74187c5F6222033cd;
-    address _base = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270; // WMATIC
+    address _lpStaker = 0x9774558534036Ff2E236331546691b4eB70594b1;
+    address _stargateRouter = 0x53Bf833A5d6c4ddA888F69c22C88C9f356a41614;
+    address _base = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1; // WETH
     address _stg = 0x2F6F07CDcf3588944Bf4C42aC74ff24bF56e7590;
 
     // Selector for testing
@@ -196,25 +196,21 @@ contract Setup is ExtendedTest, IEvents {
     }
 
     function _setTokenAddrs() internal {
-        tokenAddrs["DAI"] = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063;
-        tokenAddrs["USDT"] = 0xc2132D05D31c914a87C6611C10748AEb04B58e8F;
-        tokenAddrs["USDC"] = 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174;
+        tokenAddrs["USDT"] = 0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9;
+        tokenAddrs["USDC"] = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8;
     }
 
     function _setStakingId() internal {
-        stakingId["DAI"] = 2;
         stakingId["USDT"] = 1;
         stakingId["USDC"] = 0;
     }
 
     function _setRewardToBaseFee() internal {
-        rewardToBaseFee["DAI"] = 3000;
         rewardToBaseFee["USDT"] = 3000;
         rewardToBaseFee["USDC"] = 3000;
     }
 
     function _setBaseToAssetFee() internal {
-        baseToAssetFee["DAI"] = 500;
         baseToAssetFee["USDT"] = 500;
         baseToAssetFee["USDC"] = 500;
     }

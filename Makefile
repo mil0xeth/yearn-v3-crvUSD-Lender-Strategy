@@ -8,8 +8,8 @@ size  :; forge build --sizes
 # storage inspection
 inspect :; forge inspect ${contract} storage-layout --pretty
 
-FORK_URL := ${MATIC_RPC_URL} 
-TEST_SINGLE := test_increase_delta_credit
+FORK_URL := ${ARBI_RPC_URL} 
+TEST_SINGLE := test_operation
 
 # local tests without fork
 test  :; forge test -vv --fork-url ${FORK_URL} --etherscan-api-key ${ETHERSCAN_API_KEY}

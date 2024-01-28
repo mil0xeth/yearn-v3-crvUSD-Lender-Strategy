@@ -21,7 +21,7 @@ interface ILPStaking {
         uint256 _pid,
         address _user
     ) external view returns (UserInfo memory);
-    function stargate() external view returns (address);
+    function eToken() external view returns (address);
     function deposit(uint256 _pid, uint256 _amount) external;
     function withdraw(uint256 _pid, uint256 _amount) external;
     function massUpdatePools() external;
