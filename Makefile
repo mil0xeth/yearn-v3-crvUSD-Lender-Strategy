@@ -9,7 +9,7 @@ size  :; forge build --sizes
 inspect :; forge inspect ${contract} storage-layout --pretty
 
 FORK_URL := ${ARBI_RPC_URL} 
-TEST_SINGLE := test_operation
+TEST_SINGLE := test_oracle
 
 # local tests without fork
 test  :; forge test -vv --fork-url ${FORK_URL} --etherscan-api-key ${ETHERSCAN_API_KEY}

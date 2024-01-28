@@ -2,7 +2,7 @@
 pragma solidity 0.8.18;
 
 import {AprOracleBase} from "@periphery/AprOracle/AprOracleBase.sol";
-import {UniswapV3Swapper} from "@periphery/swappers/UniswapV3Swapper.sol";
+import {UniswapV2Swapper} from "@periphery/swappers/UniswapV2Swapper.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IStrategy {
@@ -34,10 +34,10 @@ interface ILPToken {
     function totalLiquidity() external view returns (uint256);
 }
 
-contract StrategyAprOracle is AprOracleBase, UniswapV3Swapper {
+contract StrategyAprOracle is AprOracleBase, UniswapV2Swapper {
 
     constructor() AprOracleBase("Stargate Staker Oracle", msg.sender) {
-        router = 0xE592427A0AEce92De3Edee1F18E0157C05861564; // default to Uniswap V3
+        router = 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506; // default to sushiswap v2
         base = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1; // WETH
     }
 

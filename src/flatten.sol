@@ -1619,299 +1619,264 @@ abstract contract BaseHealthCheck is BaseStrategy {
     }
 }
 
-interface IUniswapV2Router01 {
-    function factory() external pure returns (address);
-
-    function WETH() external pure returns (address);
-
-    function addLiquidity(
-        address tokenA,
-        address tokenB,
-        uint256 amountADesired,
-        uint256 amountBDesired,
-        uint256 amountAMin,
-        uint256 amountBMin,
-        address to,
-        uint256 deadline
-    ) external returns (uint256 amountA, uint256 amountB, uint256 liquidity);
-
-    function addLiquidityETH(
-        address token,
-        uint256 amountTokenDesired,
-        uint256 amountTokenMin,
-        uint256 amountETHMin,
-        address to,
-        uint256 deadline
-    )
-        external
-        payable
-        returns (uint256 amountToken, uint256 amountETH, uint256 liquidity);
-
-    function removeLiquidity(
-        address tokenA,
-        address tokenB,
-        uint256 liquidity,
-        uint256 amountAMin,
-        uint256 amountBMin,
-        address to,
-        uint256 deadline
-    ) external returns (uint256 amountA, uint256 amountB);
-
-    function removeLiquidityETH(
-        address token,
-        uint256 liquidity,
-        uint256 amountTokenMin,
-        uint256 amountETHMin,
-        address to,
-        uint256 deadline
-    ) external returns (uint256 amountToken, uint256 amountETH);
-
-    function removeLiquidityWithPermit(
-        address tokenA,
-        address tokenB,
-        uint256 liquidity,
-        uint256 amountAMin,
-        uint256 amountBMin,
-        address to,
-        uint256 deadline,
-        bool approveMax,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external returns (uint256 amountA, uint256 amountB);
-
-    function removeLiquidityETHWithPermit(
-        address token,
-        uint256 liquidity,
-        uint256 amountTokenMin,
-        uint256 amountETHMin,
-        address to,
-        uint256 deadline,
-        bool approveMax,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external returns (uint256 amountToken, uint256 amountETH);
-
-    function swapExactTokensForTokens(
-        uint256 amountIn,
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external returns (uint256[] memory amounts);
-
-    function swapTokensForExactTokens(
-        uint256 amountOut,
-        uint256 amountInMax,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external returns (uint256[] memory amounts);
-
-    function swapExactETHForTokens(
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external payable returns (uint256[] memory amounts);
-
-    function swapTokensForExactETH(
-        uint256 amountOut,
-        uint256 amountInMax,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external returns (uint256[] memory amounts);
-
-    function swapExactTokensForETH(
-        uint256 amountIn,
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external returns (uint256[] memory amounts);
-
-    function swapETHForExactTokens(
-        uint256 amountOut,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external payable returns (uint256[] memory amounts);
-
-    function quote(
-        uint256 amountA,
-        uint256 reserveA,
-        uint256 reserveB
-    ) external pure returns (uint256 amountB);
-
-    function getAmountOut(
-        uint256 amountIn,
-        uint256 reserveIn,
-        uint256 reserveOut
-    ) external pure returns (uint256 amountOut);
-
-    function getAmountIn(
-        uint256 amountOut,
-        uint256 reserveIn,
-        uint256 reserveOut
-    ) external pure returns (uint256 amountIn);
-
-    function getAmountsOut(
-        uint256 amountIn,
-        address[] calldata path
-    ) external view returns (uint256[] memory amounts);
-
-    function getAmountsIn(
-        uint256 amountOut,
-        address[] calldata path
-    ) external view returns (uint256[] memory amounts);
+/// @title Callback for IUniswapV3PoolActions#swap
+/// @notice Any contract that calls IUniswapV3PoolActions#swap must implement this interface
+interface IUniswapV3SwapCallback {
+    /// @notice Called to `msg.sender` after executing a swap via IUniswapV3Pool#swap.
+    /// @dev In the implementation you must pay the pool tokens owed for the swap.
+    /// The caller of this method must be checked to be a UniswapV3Pool deployed by the canonical UniswapV3Factory.
+    /// amount0Delta and amount1Delta can both be 0 if no tokens were swapped.
+    /// @param amount0Delta The amount of token0 that was sent (negative) or must be received (positive) by the pool by
+    /// the end of the swap. If positive, the callback must send that amount of token0 to the pool.
+    /// @param amount1Delta The amount of token1 that was sent (negative) or must be received (positive) by the pool by
+    /// the end of the swap. If positive, the callback must send that amount of token1 to the pool.
+    /// @param data Any data passed through by the caller via the IUniswapV3PoolActions#swap call
+    function uniswapV3SwapCallback(
+        int256 amount0Delta,
+        int256 amount1Delta,
+        bytes calldata data
+    ) external;
 }
 
-interface IUniswapV2Router02 is IUniswapV2Router01 {
-    function removeLiquidityETHSupportingFeeOnTransferTokens(
-        address token,
-        uint256 liquidity,
-        uint256 amountTokenMin,
-        uint256 amountETHMin,
-        address to,
-        uint256 deadline
-    ) external returns (uint256 amountETH);
+/// @title Router token swapping functionality
+/// @notice Functions for swapping tokens via Uniswap V3
+interface ISwapRouter is IUniswapV3SwapCallback {
+    struct ExactInputSingleParams {
+        address tokenIn;
+        address tokenOut;
+        uint24 fee;
+        address recipient;
+        uint256 deadline;
+        uint256 amountIn;
+        uint256 amountOutMinimum;
+        uint160 sqrtPriceLimitX96;
+    }
 
-    function removeLiquidityETHWithPermitSupportingFeeOnTransferTokens(
-        address token,
-        uint256 liquidity,
-        uint256 amountTokenMin,
-        uint256 amountETHMin,
-        address to,
-        uint256 deadline,
-        bool approveMax,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external returns (uint256 amountETH);
+    /// @notice Swaps `amountIn` of one token for as much as possible of another token
+    /// @param params The parameters necessary for the swap, encoded as `ExactInputSingleParams` in calldata
+    /// @return amountOut The amount of the received token
+    function exactInputSingle(
+        ExactInputSingleParams calldata params
+    ) external payable returns (uint256 amountOut);
 
-    function swapExactTokensForTokensSupportingFeeOnTransferTokens(
-        uint256 amountIn,
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external;
+    struct ExactInputParams {
+        bytes path;
+        address recipient;
+        uint256 deadline;
+        uint256 amountIn;
+        uint256 amountOutMinimum;
+    }
 
-    function swapExactETHForTokensSupportingFeeOnTransferTokens(
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external payable;
+    /// @notice Swaps `amountIn` of one token for as much as possible of another along the specified path
+    /// @param params The parameters necessary for the multi-hop swap, encoded as `ExactInputParams` in calldata
+    /// @return amountOut The amount of the received token
+    function exactInput(
+        ExactInputParams calldata params
+    ) external payable returns (uint256 amountOut);
 
-    function swapExactTokensForETHSupportingFeeOnTransferTokens(
-        uint256 amountIn,
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external;
+    struct ExactOutputSingleParams {
+        address tokenIn;
+        address tokenOut;
+        uint24 fee;
+        address recipient;
+        uint256 deadline;
+        uint256 amountOut;
+        uint256 amountInMaximum;
+        uint160 sqrtPriceLimitX96;
+    }
+
+    /// @notice Swaps as little as possible of one token for `amountOut` of another token
+    /// @param params The parameters necessary for the swap, encoded as `ExactOutputSingleParams` in calldata
+    /// @return amountIn The amount of the input token
+    function exactOutputSingle(
+        ExactOutputSingleParams calldata params
+    ) external payable returns (uint256 amountIn);
+
+    struct ExactOutputParams {
+        bytes path;
+        address recipient;
+        uint256 deadline;
+        uint256 amountOut;
+        uint256 amountInMaximum;
+    }
+
+    /// @notice Swaps as little as possible of one token for `amountOut` of another along the specified path (reversed)
+    /// @param params The parameters necessary for the multi-hop swap, encoded as `ExactOutputParams` in calldata
+    /// @return amountIn The amount of the input token
+    function exactOutput(
+        ExactOutputParams calldata params
+    ) external payable returns (uint256 amountIn);
+
+    // Taken from https://soliditydeveloper.com/uniswap3
+    // Manually added to the interface
+    function refundETH() external payable;
 }
 
 /**
- *   @title UniswapV2Swapper
+ *   @title UniswapV3Swapper
  *   @author Yearn.finance
  *   @dev This is a simple contract that can be inherited by any tokenized
- *   strategy that would like to use Uniswap V2 for swaps. It holds all needed
- *   logic to perform exact input swaps.
+ *   strategy that would like to use Uniswap V3 for swaps. It hold all needed
+ *   logic to perform both exact input and exact output swaps.
  *
  *   The global address variables default to the ETH mainnet addresses but
  *   remain settable by the inheriting contract to allow for customization
  *   based on needs or chain its used on.
+ *
+ *   The only variables that are required to be set are the specific fees
+ *   for each token pair. The inheriting contract can use the {_setUniFees}
+ *   function to easily set this for any token pairs needed.
  */
-contract UniswapV2Swapper {
+contract UniswapV3Swapper {
     // Optional Variable to be set to not sell dust.
     uint256 public minAmountToSell;
     // Defaults to WETH on mainnet.
     address public base = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
-    // Defaults to Uniswap V2 router on mainnet.
-    address public router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+    // Defaults to Uniswap V3 router on mainnet.
+    address public router = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
+
+    // Fees for the Uni V3 pools. Each fee should get set each way in
+    // the mapping so no matter the direction the correct fee will get
+    // returned for any two tokens.
+    mapping(address => mapping(address => uint24)) public uniFees;
+
+    /**
+     * @dev All fess will default to 0 on creation. A strategist will need
+     * To set the mapping for the tokens expected to swap. This function
+     * is to help set the mapping. It can be called internally during
+     * initialization, through permissioned functions etc.
+     */
+    function _setUniFees(
+        address _token0,
+        address _token1,
+        uint24 _fee
+    ) internal {
+        uniFees[_token0][_token1] = _fee;
+        uniFees[_token1][_token0] = _fee;
+    }
 
     /**
      * @dev Used to swap a specific amount of `_from` to `_to`.
      * This will check and handle all allowances as well as not swapping
-     * unless `_amountIn` is greater than the set `_minAmountToSell`
+     * unless `_amountIn` is greater than the set `_minAmountOut`
      *
      * If one of the tokens matches with the `base` token it will do only
      * one jump, otherwise will do two jumps.
+     *
+     * The corresponding uniFees for each token pair will need to be set
+     * other wise this function will revert.
      *
      * @param _from The token we are swapping from.
      * @param _to The token we are swapping to.
      * @param _amountIn The amount of `_from` we will swap.
      * @param _minAmountOut The min of `_to` to get out.
+     * @return _amountOut The actual amount of `_to` that was swapped to
      */
     function _swapFrom(
         address _from,
         address _to,
         uint256 _amountIn,
         uint256 _minAmountOut
-    ) internal {
+    ) internal returns (uint256 _amountOut) {
         if (_amountIn > minAmountToSell) {
             _checkAllowance(router, _from, _amountIn);
+            if (_from == base || _to == base) {
+                ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
+                    .ExactInputSingleParams(
+                        _from, // tokenIn
+                        _to, // tokenOut
+                        uniFees[_from][_to], // from-to fee
+                        address(this), // recipient
+                        block.timestamp, // deadline
+                        _amountIn, // amountIn
+                        _minAmountOut, // amountOut
+                        0 // sqrtPriceLimitX96
+                    );
 
-            IUniswapV2Router02(router).swapExactTokensForTokens(
-                _amountIn,
-                _minAmountOut,
-                _getTokenOutPath(_from, _to),
-                address(this),
-                block.timestamp
-            );
+                _amountOut = ISwapRouter(router).exactInputSingle(params);
+            } else {
+                bytes memory path = abi.encodePacked(
+                    _from, // tokenIn
+                    uniFees[_from][base], // from-base fee
+                    base, // base token
+                    uniFees[base][_to], // base-to fee
+                    _to // tokenOut
+                );
+
+                _amountOut = ISwapRouter(router).exactInput(
+                    ISwapRouter.ExactInputParams(
+                        path,
+                        address(this),
+                        block.timestamp,
+                        _amountIn,
+                        _minAmountOut
+                    )
+                );
+            }
         }
     }
 
-    /**\
-     * @dev Internal function to get a quoted amount out of token sale.
+    /**
+     * @dev Used to swap a specific amount of `_to` from `_from` unless
+     * it takes more than `_maxAmountFrom`.
      *
-     * NOTE: This can be easily manipulated and should not be relied on
-     * for anything other than estimations.
+     * This will check and handle all allowances as well as not swapping
+     * unless `_maxAmountFrom` is greater than the set `minAmountToSell`
      *
-     * @param _from The token to sell.
-     * @param _to The token to buy.
-     * @param _amountIn The amount of `_from` to sell.
-     * @return . The expected amount of `_to` to buy.
+     * If one of the tokens matches with the `base` token it will do only
+     * one jump, otherwise will do two jumps.
+     *
+     * The corresponding uniFees for each token pair will need to be set
+     * other wise this function will revert.
+     *
+     * @param _from The token we are swapping from.
+     * @param _to The token we are swapping to.
+     * @param _amountTo The amount of `_to` we need out.
+     * @param _maxAmountFrom The max of `_from` we will swap.
+     * @return _amountIn The actual amount of `_from` swapped.
      */
-    function _getAmountOut(
+    function _swapTo(
         address _from,
         address _to,
-        uint256 _amountIn
-    ) internal view returns (uint256) {
-        uint256[] memory amounts = IUniswapV2Router02(router).getAmountsOut(
-            _amountIn,
-            _getTokenOutPath(_from, _to)
-        );
+        uint256 _amountTo,
+        uint256 _maxAmountFrom
+    ) internal returns (uint256 _amountIn) {
+        if (_maxAmountFrom > minAmountToSell) {
+            _checkAllowance(router, _from, _maxAmountFrom);
+            if (_from == base || _to == base) {
+                ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter
+                    .ExactOutputSingleParams(
+                        _from, // tokenIn
+                        _to, // tokenOut
+                        uniFees[_from][_to], // from-to fee
+                        address(this), // recipient
+                        block.timestamp, // deadline
+                        _amountTo, // amountOut
+                        _maxAmountFrom, // maxAmountIn
+                        0 // sqrtPriceLimitX96
+                    );
 
-        return amounts[amounts.length - 1];
-    }
+                _amountIn = ISwapRouter(router).exactOutputSingle(params);
+            } else {
+                bytes memory path = abi.encodePacked(
+                    _to,
+                    uniFees[base][_to], // base-to fee
+                    base,
+                    uniFees[_from][base], // from-base fee
+                    _from
+                );
 
-    /**
-     * @notice Internal function used to easily get the path
-     * to be used for any given tokens.
-     *
-     * @param _tokenIn The token to swap from.
-     * @param _tokenOut The token to swap to.
-     * @return _path Ordered array of the path to swap through.
-     */
-    function _getTokenOutPath(
-        address _tokenIn,
-        address _tokenOut
-    ) internal view returns (address[] memory _path) {
-        bool isBase = _tokenIn == base || _tokenOut == base;
-        _path = new address[](isBase ? 2 : 3);
-        _path[0] = _tokenIn;
-
-        if (isBase) {
-            _path[1] = _tokenOut;
-        } else {
-            _path[1] = base;
-            _path[2] = _tokenOut;
+                _amountIn = ISwapRouter(router).exactOutput(
+                    ISwapRouter.ExactOutputParams(
+                        path,
+                        address(this),
+                        block.timestamp,
+                        _amountTo, // How much we want out
+                        _maxAmountFrom
+                    )
+                );
+            }
         }
     }
 
@@ -2648,7 +2613,7 @@ interface ILPStaking {
         uint256 _pid,
         address _user
     ) external view returns (UserInfo memory);
-    function stargate() external view returns (address);
+    function eToken() external view returns (address);
     function deposit(uint256 _pid, uint256 _amount) external;
     function withdraw(uint256 _pid, uint256 _amount) external;
     function massUpdatePools() external;
@@ -2705,7 +2670,7 @@ interface IStargateRouter {
  * @notice A Yearn V3 strategy that deposits native asset and stakes LP tokens in the Stargate protocol.
  */
 
-contract StargateStaker is BaseHealthCheck, UniswapV2Swapper {
+contract StargateStaker is BaseHealthCheck, UniswapV3Swapper {
     using SafeERC20 for ERC20;
 
     uint256 public maxAmountToSell = 250 * 1e18;
@@ -2742,7 +2707,7 @@ contract StargateStaker is BaseHealthCheck, UniswapV2Swapper {
         require(pool.token() == _asset, "Invalid asset");
 
         poolId = uint16(pool.poolId());
-        reward = ERC20(lpStaker.stargate());
+        reward = ERC20(lpStaker.eToken());
         convertRate = pool.convertRate();
 
         lpToken.safeApprove(address(lpStaker), type(uint256).max);
@@ -2750,11 +2715,11 @@ contract StargateStaker is BaseHealthCheck, UniswapV2Swapper {
 
         _setLossLimitRatio(5);
 
-        // default to sushiswap v2
-        router = 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506;
+        // default to Uniswap V3
+        router = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
 
-        // usdc_e
-        base = 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174;
+        // weth
+        base = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     }
 
     function _deployFunds(uint256 _amount) internal override {

@@ -18,6 +18,7 @@ contract OracleTest is Setup {
         // TODO: Add checks for the setup
 
         uint256 currentApr = oracle.aprAfterDebtChange(_strategy, 0);
+        console.log(currentApr);
 
         // Should be greater than 0 but likely less than 100%
         assertGt(currentApr, 0, "ZERO");
