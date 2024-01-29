@@ -2668,6 +2668,7 @@ interface IStargateRouter {
  * @title StargateStaker
  * @author 0xValJohn
  * @notice A Yearn V3 strategy that deposits native asset and stakes LP tokens in the Stargate protocol.
+ * @dev Version for LPStakingTime
  */
 
 contract StargateStaker is BaseHealthCheck, UniswapV3Swapper {
@@ -2718,7 +2719,7 @@ contract StargateStaker is BaseHealthCheck, UniswapV3Swapper {
         // default to Uniswap V3
         router = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
 
-        // weth
+        // WETH
         base = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     }
 
@@ -2812,6 +2813,14 @@ contract StargateStaker is BaseHealthCheck, UniswapV3Swapper {
 
     function setBase(address _base) external onlyManagement {
         base = _base;
+    }
+
+    function setUniFees(
+        uint24 _rewardToEth,
+        uint24 _ethToAsset
+    ) external onlyManagement {
+        _setUniFees(address(reward), base, _rewardToEth);
+        _setUniFees(base, address(asset), _ethToAsset);
     }
 }
 
