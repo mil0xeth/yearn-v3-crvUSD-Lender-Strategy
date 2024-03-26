@@ -4,7 +4,7 @@ pragma solidity 0.8.18;
 import "forge-std/console.sol";
 import {ExtendedTest} from "./ExtendedTest.sol";
 
-import {Strategy, ERC20} from "../../Strategy.sol";
+import {StargateStaker, ERC20} from "../../StargateStaker.sol";
 import {IStrategyInterface} from "../../interfaces/IStrategyInterface.sol";
 
 // Inherit the events so they can be checked if desired.
@@ -31,6 +31,11 @@ contract Setup is ExtendedTest, IEvents {
     address public management = address(1);
     address public performanceFeeRecipient = address(3);
 
+    // strategy specific
+    address public _lpStaker;
+    address public _stargateRouter;
+    uint16 public _stakingID;
+
     // Address of the real deployed Factory
     address public factory;
 
@@ -49,7 +54,11 @@ contract Setup is ExtendedTest, IEvents {
         _setTokenAddrs();
 
         // Set asset
-        asset = ERC20(tokenAddrs["DAI"]);
+        asset = ERC20(tokenAddrs["USDC"]);
+
+        _lpStaker = 0xB0D502E938ed5f4df2E681fE6E419ff29631d62b;
+        _stargateRouter = 0x8731d54E9D02c286767d56ac03e8037C07e01e98;
+        _stakingID = 0;
 
         // Set decimals
         decimals = asset.decimals();
@@ -71,7 +80,7 @@ contract Setup is ExtendedTest, IEvents {
     function setUpStrategy() public returns (address) {
         // we save the strategy as a IStrategyInterface to give it the needed interface
         IStrategyInterface _strategy = IStrategyInterface(
-            address(new Strategy(address(asset), "Tokenized Strategy"))
+            address(new StargateStaker(address(asset), "Tokenized Strategy", _lpStaker, _stargateRouter, _stakingID))
         );
 
         // set keeper
