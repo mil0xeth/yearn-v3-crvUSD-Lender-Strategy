@@ -10,7 +10,7 @@ interface IStrategy {
 
 interface ICurveVault {
     function controller() external view returns (address);
-    function totalSupply() external view returns (uint256);
+    function totalAssets() external view returns (uint256);
 }
 
 interface IController {
@@ -32,7 +32,7 @@ interface IChainlink {
 }
 
 contract StrategyAprOracle is AprOracleBase {
-    address internal constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52; //hardcode for now
+    address internal constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52; // hardcoded for now
     address public immutable chainlinkCRVUSDvsUSD;
     address public immutable chainlinkCRVvsUSD;
     uint256 internal constant WAD = 1e18;
@@ -48,19 +48,17 @@ contract StrategyAprOracle is AprOracleBase {
         int256 _delta
     ) external view override returns (uint256 apr) {
         IStrategy strategy = IStrategy(_strategy);
-
         ICurveVault curveVault = ICurveVault(strategy.vault());
-
         IController controller = IController(curveVault.controller());
         IMonetaryPolicy monetaryPolicy = IMonetaryPolicy(controller.monetary_policy());
         
-        uint256 futureRate = monetaryPolicy.future_rate(address(controller),_delta,0);        
-        uint256 lendingAPR = futureRate * secondsInOneYear * curveVault.totalSupply() / controller.total_debt();
+        // native supply yield
+        uint256 futureRate = monetaryPolicy.future_rate(address(controller), _delta, 0);        
+        uint256 lendingAPR = futureRate * secondsInOneYear * controller.total_debt() / curveVault.totalAssets();
 
+        // gauge rewards (crv)
         address liquidityGauge = strategy.staking();
-        (address token, , , uint256 rate, , uint256 integral) = ILiquidityGauge(liquidityGauge).reward_data(CRV);
-        //add check for token == CRV?
-        //do we need integral?
+        (,,,uint256 rate,,) = ILiquidityGauge(liquidityGauge).reward_data(CRV);
 
         uint256 rewardYield;
         uint256 totalSupply = ILiquidityGauge(liquidityGauge).totalSupply();
@@ -69,16 +67,16 @@ contract StrategyAprOracle is AprOracleBase {
         } else if (uint256(_delta) < totalSupply) {
             rewardYield = secondsInOneYear * rate * WAD / ( totalSupply - uint256(_delta) );
         } else {
-            rewardYield = secondsInOneYear * rate * WAD;
+            rewardYield = 0; // @todo: check
         }
         
-        //pricing: reward to CRVUSD
+        // pricing: reward to CRVUSD
         (, int256 price, , , ) = IChainlink(chainlinkCRVvsUSD).latestRoundData();
-        uint256 USDyield = rewardYield * uint256(price) / 1e8; //convert reward to USD
+        uint256 USDyield = rewardYield * uint256(price) / 1e8; // convert reward to USD
         (, price, , , ) = IChainlink(chainlinkCRVUSDvsUSD).latestRoundData();
-        uint256 gaugeAPR = USDyield * WAD / (uint256(price) * 1e10); //convert USD to CRVUSD
+        uint256 gaugeAPR = USDyield * WAD / (uint256(price) * 1e10); // convert USD to CRVUSD
 
-        //return total of lending yields + gauge rewards
+        // return total of lending yields + gauge rewards
         return lendingAPR + gaugeAPR;
     }
 }
