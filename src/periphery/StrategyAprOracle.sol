@@ -4,8 +4,8 @@ pragma solidity 0.8.18;
 import {AprOracleBase} from "@periphery/AprOracle/AprOracleBase.sol";
 
 interface IStrategy {
-    function curveLendVault() external view returns (address);
-    function liquidityGauge() external view returns (address);
+    function vault() external view returns (address);
+    function staking() external view returns (address);
 }
 
 interface ICurveVault {
@@ -48,22 +48,16 @@ contract StrategyAprOracle is AprOracleBase {
         int256 _delta
     ) external view override returns (uint256 apr) {
         IStrategy strategy = IStrategy(_strategy);
-        ICurveVault curveVault = ICurveVault(strategy.curveLendVault());
+
+        ICurveVault curveVault = ICurveVault(strategy.vault());
+
         IController controller = IController(curveVault.controller());
         IMonetaryPolicy monetaryPolicy = IMonetaryPolicy(controller.monetary_policy());
         
         uint256 futureRate = monetaryPolicy.future_rate(address(controller),_delta,0);        
         uint256 lendingAPR = futureRate * secondsInOneYear * curveVault.totalSupply() / controller.total_debt();
 
-        // @todo: add APY coming from gauge staking
-        // this is the gauge, reward token expected in CRV for now
-        // https://etherscan.io/address/0x79D584d2D49eC8CE8Ea379d69364b700bd35874D#code
-        // we can use chainlink or redstone oracle for crvusd and crv
-        // https://data.chain.link/feeds/ethereum/mainnet/crvusd-usd
-        // https://data.chain.link/feeds/ethereum/mainnet/crv-usd
-        // https://app.redstone.finance/#/app/token/CRV
-
-        address liquidityGauge = strategy.liquidityGauge();
+        address liquidityGauge = strategy.staking();
         (address token, , , uint256 rate, , uint256 integral) = ILiquidityGauge(liquidityGauge).reward_data(CRV);
         //add check for token == CRV?
         //do we need integral?

@@ -4,7 +4,7 @@ pragma solidity 0.8.18;
 import "forge-std/console.sol";
 import {ExtendedTest} from "./ExtendedTest.sol";
 
-import {CurveLender, ERC20} from "../../Strategy.sol";
+import {CurveLender, ERC20} from "../../CurveLender.sol";
 import {IStrategyInterface} from "../../interfaces/IStrategyInterface.sol";
 
 // Inherit the events so they can be checked if desired.
@@ -24,9 +24,9 @@ contract Setup is ExtendedTest, IEvents {
     IStrategyInterface public strategy;
     address curveLendVault;
     address liquidityGauge;
-    address base;
-    uint24 feeBaseToAsset;
-    address GOV;
+    // address base;
+    // uint24 feeBaseToAsset;
+    // address GOV;
 
     mapping(string => address) public tokenAddrs;
 
@@ -55,12 +55,13 @@ contract Setup is ExtendedTest, IEvents {
 
         // Set asset
         asset = ERC20(tokenAddrs["CRVUSD"]);
-        curveLendVault = 0x07D988ca6C19578a628Fe3b96F6657b6b84bF352; //Mainnet tBTC
-        liquidityGauge = 0x79D584d2D49eC8CE8Ea379d69364b700bd35874D; //non-functional atm
-        base = tokenAddrs["USDC"]; //USDC usually the best base to swap to crvUSD
-        //(0.01% = 100, 0.05% = 500, 0.3% = 3000, 1% = 10000)
-        feeBaseToAsset = 500; //USDC-->crvUSD is 0.05% tier
-        GOV = 0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52; //Mainnet yearn governance
+        curveLendVault = 0xCeA18a8752bb7e7817F9AE7565328FE415C0f2cA; // Mainnet crv/crvUSD
+        liquidityGauge = 0x49887dF6fE905663CDB46c616BfBfBB50e85a265; 
+
+        // base = tokenAddrs["USDC"]; // USDC usually the best base to swap to crvUSD
+        // // (0.01% = 100, 0.05% = 500, 0.3% = 3000, 1% = 10000)
+        // feeBaseToAsset = 500; // USDC-->crvUSD is 0.05% tier
+        // GOV = 0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52; // Mainnet yearn governance
 
         // Set decimals
         decimals = asset.decimals();
@@ -83,7 +84,7 @@ contract Setup is ExtendedTest, IEvents {
     function setUpStrategy() public returns (address) {
         // we save the strategy as a IStrategyInterface to give it the needed interface
         IStrategyInterface _strategy = IStrategyInterface(
-            address(new CurveLender(address(asset), curveLendVault, liquidityGauge, base, feeBaseToAsset, GOV,  "Tokenized Strategy"))
+            address(new CurveLender(address(asset), "Tokenized Strategy", curveLendVault, liquidityGauge))
         );
 
         // set keeper
