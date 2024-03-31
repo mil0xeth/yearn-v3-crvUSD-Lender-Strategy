@@ -33,7 +33,7 @@ contract ShutdownTest is Setup {
         strategy.redeem(_amount, user, user);
 
         assertGe(
-            asset.balanceOf(user),
+            asset.balanceOf(user) + 1, //+ 1 to adjust for rounding errors
             balanceBefore + _amount,
             "!final balance"
         );

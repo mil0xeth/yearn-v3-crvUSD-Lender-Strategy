@@ -43,14 +43,14 @@ contract CurveLender is Base4626Compounder, TradeFactorySwapper {
     }
 
     function _unStake(uint256 _amount) internal virtual override {
-        staking.withdraw(balanceOfStake());
+        staking.withdraw(_amount);
     }
 
     function vaultsMaxWithdraw() public view virtual override returns (uint256) {
         return vault.convertToAssets(vault.maxRedeem(address(staking)));
     }
 
-    function availableDepositLimit(address _owner) public view virtual override returns (uint256) {
+    function availableDepositLimit(address /*_owner*/) public view virtual override returns (uint256) {
         return vault.maxDeposit(address(this));
     }
 

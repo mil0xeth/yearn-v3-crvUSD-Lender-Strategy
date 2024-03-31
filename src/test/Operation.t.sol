@@ -9,7 +9,7 @@ contract OperationTest is Setup {
         super.setUp();
     }
 
-    function test_setupStrategyOK() public {
+    function test_setupStrategyOK() public view {
         console.log("address of strategy", address(strategy));
         assertTrue(address(0) != address(strategy));
         assertEq(strategy.asset(), address(asset));
@@ -144,9 +144,11 @@ contract OperationTest is Setup {
             "!final balance"
         );
 
+        uint256 shares = strategy.balanceOf(performanceFeeRecipient);
+        console.log("performanceFeeRecipient redeem");
         vm.prank(performanceFeeRecipient);
         strategy.redeem(
-            expectedShares,
+            shares,
             performanceFeeRecipient,
             performanceFeeRecipient
         );
